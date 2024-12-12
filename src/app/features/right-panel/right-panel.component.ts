@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, Input, OnDestroy } from '@angular/core';
 import { combineLatest, Observable, of, Subscription } from 'rxjs';
 import { TaskDetailTargetPanel, TaskWithSubTasks } from '../tasks/task.model';
-import { delay, map, switchMap } from 'rxjs/operators';
+import { delay, distinctUntilChanged, map, switchMap } from 'rxjs/operators';
 import { TaskService } from '../tasks/task.service';
 import { LayoutService } from '../../core-ui/layout/layout.service';
 import { slideInFromTopAni } from '../../ui/animations/slide-in-from-top.ani';
@@ -29,16 +29,37 @@ export class RightPanelComponent implements OnDestroy {
       switchMap((task) => (task ? of(task) : of(null).pipe(delay(200)))),
     );
 
+  panelContent$: Observable<'NOTES' | 'TASK' | 'ADD_TASK_PANEL' | undefined> =
+    combineLatest([
+      this.layoutService.isShowNotes$,
+      this.taskService.selectedTask$,
+      this.layoutService.isShowIssuePanel$,
+    ]).pipe(
+      map(([isShowNotes, selectedTask, isShowAddTaskPanel]) => {
+        if (selectedTask) {
+          return 'TASK';
+        } else if (isShowNotes) {
+          return 'NOTES';
+        } else if (isShowAddTaskPanel) {
+          return 'ADD_TASK_PANEL';
+        }
+        return undefined;
+      }),
+      distinctUntilChanged(),
+    );
+
   isOpen$: Observable<boolean> = combineLatest([
     this.taskService.selectedTask$,
     this.taskService.taskDetailPanelTargetPanel$,
     this.layoutService.isShowNotes$,
+    this.layoutService.isShowIssuePanel$,
   ]).pipe(
     map(
-      ([selectedTask, targetPanel, isShowNotes]) =>
-        !!(selectedTask || isShowNotes) &&
+      ([selectedTask, targetPanel, isShowNotes, isShowAddTaskPanel]) =>
+        !!(selectedTask || isShowNotes || isShowAddTaskPanel) &&
         targetPanel !== TaskDetailTargetPanel.DONT_OPEN_PANEL,
     ),
+    distinctUntilChanged(),
   );
 
   // NOTE: prevents the inner animation from happening file panel is expanding

@@ -13,6 +13,10 @@ import { GiteaIssueModule } from './providers/gitea/gitea-issue/gitea-issue.modu
 import { EffectsModule } from '@ngrx/effects';
 import { PollToBacklogEffects } from './store/poll-to-backlog.effects';
 import { PollIssueUpdatesEffects } from './store/poll-issue-updates.effects';
+import { StoreModule } from '@ngrx/store';
+import { IssueProviderDbEffects } from './store/issue-provider-db.effects';
+import { issueProvidersFeature } from './store/issue-provider.reducer';
+import { UnlinkAllTasksOnProviderDeletionEffects } from './store/unlink-all-tasks-on-provider-deletion.effects';
 
 @NgModule({
   imports: [
@@ -24,7 +28,13 @@ import { PollIssueUpdatesEffects } from './store/poll-issue-updates.effects';
     CaldavIssueModule,
     OpenProjectIssueModule,
     GiteaIssueModule,
-    EffectsModule.forFeature([PollToBacklogEffects, PollIssueUpdatesEffects]),
+    StoreModule.forFeature(issueProvidersFeature),
+    EffectsModule.forFeature([
+      PollToBacklogEffects,
+      PollIssueUpdatesEffects,
+      IssueProviderDbEffects,
+      UnlinkAllTasksOnProviderDeletionEffects,
+    ]),
   ],
   declarations: [IssueHeaderComponent, IssueContentComponent, IssueIconPipe],
   exports: [IssueHeaderComponent, IssueContentComponent, IssueIconPipe],

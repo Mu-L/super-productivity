@@ -50,8 +50,8 @@ import { Update } from '@ngrx/entity';
 import { SnackService } from '../../../core/snack/snack.service';
 import { isToday } from '../../../util/is-today.util';
 import {
-  isTaskNotPlannedForToday,
-  isTaskPlannedForToday,
+  isShowRemoveFromToday,
+  isShowAddToToday,
   isTodayTag,
 } from '../util/is-task-today';
 import { IS_TOUCH_PRIMARY } from '../../../util/is-mouse-primary';
@@ -60,6 +60,7 @@ import { DialogScheduleTaskComponent } from '../../planner/dialog-schedule-task/
 import { PlannerService } from '../../planner/planner.service';
 import { TaskContextMenuComponent } from '../task-context-menu/task-context-menu.component';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { ICAL_TYPE } from '../../issue/issue.const';
 
 @Component({
   selector: 'task',
@@ -217,12 +218,11 @@ export class TaskComponent implements OnDestroy, AfterViewInit {
     window.clearTimeout(this._currentPanTimeout);
   }
 
-  isTaskNotPlannedForToday(): boolean {
-    return isTaskNotPlannedForToday(this.task());
+  isShowRemoveFromToday(): boolean {
+    return isShowRemoveFromToday(this.task());
   }
-
-  isTaskPlannedForToday(): boolean {
-    return isTaskPlannedForToday(this.task(), this.workContextService.isToday);
+  isShowAddToToday(): boolean {
+    return isShowAddToToday(this.task(), this.workContextService.isToday);
   }
 
   scheduleTask(): void {
@@ -583,13 +583,6 @@ export class TaskComponent implements OnDestroy, AfterViewInit {
     const t = this.task();
     if (projectId === t.projectId) {
       return;
-    } else if (t.issueId && t.issueType !== 'CALENDAR') {
-      this._snackService.open({
-        type: 'CUSTOM',
-        ico: 'block',
-        msg: T.F.TASK.S.MOVE_TO_PROJECT_NOT_ALLOWED_FOR_ISSUE_TASK,
-      });
-      return;
     } else if (!t.repeatCfgId) {
       this._taskService.moveToProject(t, projectId);
     } else {
@@ -933,4 +926,6 @@ export class TaskComponent implements OnDestroy, AfterViewInit {
       this.focusNext();
     }
   }
+
+  protected readonly ICAL_TYPE = ICAL_TYPE;
 }

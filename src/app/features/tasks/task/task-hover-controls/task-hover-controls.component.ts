@@ -8,6 +8,7 @@ import { TaskComponent } from '../task.component';
 import { TranslateModule } from '@ngx-translate/core';
 import { UiModule } from '../../../../ui/ui.module';
 import { KeyboardConfig } from '../../../config/keyboard-config.model';
+import { ICAL_TYPE } from '../../../issue/issue.const';
 
 @Component({
   selector: 'task-hover-controls',
@@ -21,8 +22,8 @@ export class TaskHoverControlsComponent {
   task = input.required<TaskWithSubTasks>();
   isCurrent = input.required<boolean>();
   isSelected = input.required<boolean>();
-  isTaskPlannedForToday = input.required<boolean>();
-  isTaskNotPlannedForToday = input.required<boolean>();
+  isShowAddToToday = input.required<boolean>();
+  isShowRemoveFromToday = input.required<boolean>();
   isBacklog = input<boolean>(false);
   isInSubTaskList = input<boolean>(false);
 
@@ -34,4 +35,6 @@ export class TaskHoverControlsComponent {
   get kb(): KeyboardConfig {
     return this.parent.kb;
   }
+
+  protected readonly ICAL_TYPE = ICAL_TYPE;
 }

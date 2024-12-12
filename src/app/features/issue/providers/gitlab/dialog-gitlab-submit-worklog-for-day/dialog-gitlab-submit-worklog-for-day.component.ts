@@ -5,13 +5,14 @@ import { DateService } from '../../../../../core/date/date.service';
 import { IssueTaskTimeTracked, Task, TimeSpentOnDay } from '../../../../tasks/task.model';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { GitlabApiService } from '../gitlab-api/gitlab-api.service';
-import { ProjectService } from '../../../../project/project.service';
 import { first, map, tap } from 'rxjs/operators';
-import { msToString } from '../../../../../ui/duration/ms-to-string.pipe';
 import { throttle } from 'helpful-decorators';
 import { SnackService } from '../../../../../core/snack/snack.service';
 import { Store } from '@ngrx/store';
+import { IssueProviderService } from '../../../issue-provider.service';
+import { msToString } from '../../../../../ui/duration/ms-to-string.pipe';
 import { updateTask } from '../../../../tasks/store/task.actions';
+import { assertTruthy } from '../../../../../util/assert-truthy';
 
 interface TmpTask {
   id: string;
@@ -35,9 +36,9 @@ export class DialogGitlabSubmitWorklogForDayComponent {
   day: string = this._dateService.todayStr();
 
   tmpTasks$: BehaviorSubject<TmpTask[]> = new BehaviorSubject<TmpTask[]>(
-    this.data.tasksForProject.map((t) => ({
+    this.data.tasksForIssueProvider.map((t) => ({
       id: t.id,
-      issueId: t.issueId as string,
+      issueId: assertTruthy(t.issueId),
       title: t.title,
       issueTimeTracked: t.issueTimeTracked,
       timeSpentOnDay: t.timeSpentOnDay,
@@ -61,7 +62,10 @@ export class DialogGitlabSubmitWorklogForDayComponent {
   tmpTasksToTrack$: Observable<TmpTask[]> = this.tmpTasks$.pipe(
     map((tasks) => tasks.filter((t) => t.timeToSubmit >= 60000)),
   );
-  project$ = this._projectService.getByIdOnce$(this.data.projectId);
+  issueProviderCfg$ = this._issueProviderService.getCfgOnce$(
+    this.data.issueProviderId,
+    'GITLAB',
+  );
 
   totalTimeToSubmit$: Observable<number> = this.tmpTasksToTrack$.pipe(
     map((tmpTasks) =>
@@ -73,14 +77,14 @@ export class DialogGitlabSubmitWorklogForDayComponent {
   constructor(
     @Inject(MAT_DIALOG_DATA)
     public readonly data: {
-      projectId: string;
-      tasksForProject: Task[];
+      issueProviderId: string;
+      tasksForIssueProvider: Task[];
     },
     private readonly _matDialogRef: MatDialogRef<DialogGitlabSubmitWorklogForDayComponent>,
     private readonly _dateService: DateService,
-    private readonly _projectService: ProjectService,
     private readonly _gitlabApiService: GitlabApiService,
     private readonly _snackService: SnackService,
+    private readonly _issueProviderService: IssueProviderService,
     private readonly _store: Store,
   ) {
     _matDialogRef.disableClose = true;
@@ -100,20 +104,18 @@ export class DialogGitlabSubmitWorklogForDayComponent {
     this.isLoading = true;
     try {
       const tasksToTrack = await this.tmpTasksToTrack$.pipe(first()).toPromise();
-      const project = await this.project$.pipe(first()).toPromise();
       if (tasksToTrack.length === 0) {
         this._snackService.open({
           type: 'SUCCESS',
           // TODO translate
-          msg: 'Gitlab: No time tracking data submitted for project ' + project.title,
+          msg: 'Gitlab: No time tracking data submitted for GitLab tasks',
         });
         this.close();
         return;
       }
 
-      const gitlabCfg = await this._projectService
-        .getGitlabCfgForProject$(this.data.projectId)
-        .pipe(first())
+      const gitlabCfg = await this._issueProviderService
+        .getCfgOnce$(this.data.issueProviderId, 'GITLAB')
         .toPromise();
       if (!gitlabCfg) {
         throw new Error('No gitlab cfg');
@@ -135,7 +137,7 @@ export class DialogGitlabSubmitWorklogForDayComponent {
                     task: {
                       id: t.id,
                       changes: {
-                        // null all diffs as clean afterwards (regardless of amount of time submitted)
+                        // null all diffs as clean afterward (regardless of amount of time submitted)
                         issueTimeTracked: { ...t.timeSpentOnDay },
                       },
                     },
@@ -151,7 +153,7 @@ export class DialogGitlabSubmitWorklogForDayComponent {
         type: 'SUCCESS',
         ico: 'file_upload',
         // TODO translate
-        msg: 'Gitlab: Successfully posted time tracking data for project' + project.title,
+        msg: 'Gitlab: Successfully posted time tracking data for GitLab tasks',
       });
       this.close();
     } catch (e) {
@@ -184,10 +186,7 @@ export class DialogGitlabSubmitWorklogForDayComponent {
 
   private async _loadAlreadyTrackedData(): Promise<void> {
     const tmpTasks = this.tmpTasks$.getValue();
-    const gitlabCfg = await this._projectService
-      .getGitlabCfgForProject$(this.data.projectId)
-      .pipe(first())
-      .toPromise();
+    const gitlabCfg = await this.issueProviderCfg$.pipe(first()).toPromise();
     const dataForAll = await Promise.all(
       tmpTasks.map((t) =>
         this._gitlabApiService

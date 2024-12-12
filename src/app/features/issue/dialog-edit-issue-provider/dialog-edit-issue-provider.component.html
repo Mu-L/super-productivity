@@ -1,0 +1,181 @@
+<!--@let issueProviderKey = d.issueProvider?.issueProviderKey || d.issueProviderKey;-->
+<!--&lt;!&ndash;&ndash;&gt;-->
+<!--@let isEdit = !!d.issueProvider?.issueProviderKey;-->
+<!--&lt;!&ndash;&ndash;&gt;-->
+<!--@let model = isEdit ? d.issueProvider : DEFAULT_ISSUE_PROVIDER_CFGS[issueProviderKey];-->
+
+<h1 mat-dialog-title>
+  <mat-icon
+    class="dialog-header-icon"
+    [svgIcon]="(issueProviderKey)|issueIcon"
+  ></mat-icon>
+  <!-- TODO improve title -->
+
+  {{ isEdit ? 'Edit' : 'Setup' }} {{ title }} Config
+  <!--  <span>{{T.F.JIRA.DIALOG_INITIAL.TITLE|translate}}</span>-->
+</h1>
+
+<form
+  [formGroup]="form"
+  (ngSubmit)="submit()"
+>
+  <mat-dialog-content>
+    <help-section *ngIf="configFormSection?.help||configFormSection?.helpArr">
+      <div
+        *ngIf="configFormSection?.help"
+        [innerHtml]="configFormSection?.help|translate"
+      ></div>
+      <ng-container *ngIf="configFormSection?.helpArr">
+        <ng-container *ngFor="let helpSection of configFormSection?.helpArr; ">
+          <div
+            *ngIf="helpSection.h"
+            class="mat-caption"
+          >
+            {{ helpSection.h|translate }}
+          </div>
+          <p
+            *ngIf="helpSection.p"
+            [innerHTML]="helpSection.p|translate"
+          ></p>
+          <p
+            *ngIf="helpSection.p2"
+            [innerHTML]="helpSection.p2|translate"
+          ></p>
+          <p
+            *ngIf="helpSection.p3"
+            [innerHTML]="helpSection.p3|translate"
+          ></p>
+          <p
+            *ngIf="helpSection.p4"
+            [innerHTML]="helpSection.p4|translate"
+          ></p>
+        </ng-container>
+      </ng-container>
+    </help-section>
+
+    @if (isEdit) {
+    <div style="margin-bottom: 32px">
+      <mat-slide-toggle
+        [ngModel]="model.isEnabled"
+        (ngModelChange)="changeEnabled($event)"
+        [ngModelOptions]="{standalone: true}"
+      >
+        {{ T.G.ENABLED|translate }}
+      </mat-slide-toggle>
+    </div>
+    }
+    <!-- -->
+    @if (model.isEnabled) {
+    <!-- -->
+    @if (issueProviderKey === ICAL_TYPE) {
+    <!-- -->
+    @if(d.calendarContextInfoTarget === 'GOOGLE'){
+    <div class="tpl">
+      <p>
+        <a
+          target="_blank"
+          href="https://support.google.com/calendar/answer/37648?hl=en#zippy=%2Csync-your-google-calendar-view-edit%2Cget-your-calendar-view-only"
+          >How to get the iCal url for Google Calendar?</a
+        >
+      </p>
+      <!--      <p [innerHTML]="T.G.EXTENSION_INFO|translate"></p>-->
+    </div>
+    }
+    <!-- -->
+    @if(d.calendarContextInfoTarget === 'OUTLOOK365'){
+    <div class="tpl">
+      <p>
+        <a
+          target="_blank"
+          href="https://support.google.com/calendar/answer/37648?hl=en#zippy=%2Csync-your-google-calendar-view-edit%2Cget-your-calendar-view-only"
+          >How to get the iCal url for Outlook 365?</a
+        >
+      </p>
+      <!--      <p [innerHTML]="T.G.EXTENSION_INFO|translate"></p>-->
+    </div>
+    } }
+    <!-- -->
+    @if (issueProviderKey === 'JIRA') {
+    <div [ngClass]="HelperClasses.isHideForAdvancedFeatures">
+      <p [innerHTML]="T.G.EXTENSION_INFO|translate"></p>
+    </div>
+    }
+
+    <formly-form
+      [model]="model"
+      (modelChange)="formlyModelChange($event)"
+      [fields]="fields"
+      [form]="form"
+    ></formly-form>
+
+    @switch (issueProviderKey) {
+    <!-- -->
+    @case ("JIRA") {
+    <jira-additonal-cfg
+      [section]="configFormSection"
+      [cfg]="model"
+      (modelChange)="customCfgCmpSave($event)"
+    ></jira-additonal-cfg>
+    <!-- -->
+    } @case ("OPEN_PROJECT") {
+    <open-project-additional-cfg
+      [section]="configFormSection"
+      [cfg]="model"
+      (modelChange)="customCfgCmpSave($event)"
+    ></open-project-additional-cfg>
+    <!-- -->
+    } } }
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button
+      (click)="cancel()"
+      color="primary"
+      mat-button
+      type="button"
+    >
+      {{ T.G.CANCEL|translate }}
+    </button>
+
+    @if (isEdit) {
+    <button
+      (click)="remove()"
+      color="warn"
+      mat-button
+      type="button"
+    >
+      <mat-icon>delete_forever</mat-icon>
+      {{ T.G.DELETE|translate }}
+    </button>
+    } @else {
+    <!-- -->
+    @if (isConnectionWorks()) {
+    <div class="success-info">
+      <mat-icon>check</mat-icon>
+    </div>
+    } @else {
+    <button
+      (click)="testConnection()"
+      mat-button
+      color="primary"
+      type="button"
+      [disabled]="form.invalid"
+    >
+      <mat-icon>online_prediction</mat-icon>
+      Test
+      <!--      {{ T.G.DELETE|translate }}-->
+    </button>
+    }
+    <!-- -->
+    }
+    <button
+      color="primary"
+      mat-stroked-button
+      type="submit"
+      [disabled]="form.invalid"
+    >
+      <mat-icon>save</mat-icon>
+      {{ T.G.SAVE|translate }}
+    </button>
+  </mat-dialog-actions>
+</form>

@@ -12,6 +12,7 @@ import {
   mapIssuesResponse,
   mapResponse,
   mapToSearchResults,
+  mapToSearchResultsForJQL,
   mapTransitionResponse,
 } from './jira-issue/jira-issue-map.util';
 import {
@@ -33,6 +34,8 @@ import {
   mapTo,
   shareReplay,
   take,
+  tap,
+  timeoutWith,
 } from 'rxjs/operators';
 import { JiraIssue, JiraIssueReduced } from './jira-issue/jira-issue.model';
 import moment from 'moment';
@@ -84,7 +87,11 @@ export class JiraApiService {
   private _isExtension: boolean = false;
   private _isInterfacesReadyIfNeeded$: Observable<boolean> = IS_ELECTRON
     ? of(true).pipe()
-    : this._chromeExtensionInterfaceService.onReady$.pipe(mapTo(true), shareReplay(1));
+    : this._chromeExtensionInterfaceService.onReady$.pipe(
+        mapTo(true),
+        shareReplay(1),
+        timeoutWith(500, throwError('Jira: Extension not installed or not ready')),
+      );
 
   constructor(
     private _chromeExtensionInterfaceService: ChromeExtensionInterfaceService,
@@ -116,6 +123,30 @@ export class JiraApiService {
     sessionStorage.removeItem(BLOCK_ACCESS_KEY);
   }
 
+  search$(searchTermJQL: string, cfg: JiraCfg): Observable<SearchResultItem[]> {
+    return this._sendRequest$({
+      jiraReqCfg: {
+        pathname: 'search/jql',
+        followAllRedirects: true,
+        query: {
+          jql: searchTermJQL,
+          // fields: [
+          //   ...JIRA_ADDITIONAL_ISSUE_FIELDS,
+          //   ...(cfg.storyPointFieldId ? [cfg.storyPointFieldId] : []),
+          // ],
+        },
+        transform: mapToSearchResultsForJQL,
+        // NOTE: we pass the cfg as well to avoid race conditions
+      },
+      cfg,
+    }).pipe(
+      // switchMap((res) =>
+      //   res.length > 0 ? of(res) : this.issuePicker$(searchTerm, cfg),
+      // ),
+      tap((v) => console.log('AAAAA', v)),
+    );
+  }
+
   issuePicker$(searchTerm: string, cfg: JiraCfg): Observable<SearchResultItem[]> {
     const searchStr = `${searchTerm}`;
 
@@ -127,14 +158,41 @@ export class JiraApiService {
           showSubTasks: true,
           showSubTaskParent: true,
           query: searchStr,
-          currentJQL: cfg.searchJqlQuery,
+          currentJQL: cfg.searchJqlQuery || '',
         },
         transform: mapToSearchResults,
         // NOTE: we pass the cfg as well to avoid race conditions
       },
       cfg,
-    });
+    })
+      .pipe
+      // switchMap((res) =>
+      //   res.length > 0 ? of(res) : this.fallBackSearch$(searchTerm, cfg),
+      // ),
+      ();
   }
+
+  // fallBackSearch$(searchTerm: string, cfg: JiraCfg): Observable<SearchResultItem[]> {
+  //   const options = {
+  //     maxResults: JIRA_MAX_RESULTS,
+  //     fields: [
+  //       ...JIRA_ADDITIONAL_ISSUE_FIELDS,
+  //       ...(cfg.storyPointFieldId ? [cfg.storyPointFieldId] : []),
+  //     ],
+  //   };
+  //   return this._sendRequest$({
+  //     jiraReqCfg: {
+  //       transform: mapIssuesResponse as (res: any, cfg?: JiraCfg) => any,
+  //       pathname: 'search',
+  //       method: 'POST',
+  //       body: {
+  //         ...options,
+  //         jql: searchTerm,
+  //       },
+  //     },
+  //     cfg,
+  //   });
+  // }
 
   listFields$(cfg: JiraCfg): Observable<any> {
     return this._sendRequest$({
@@ -407,6 +465,25 @@ export class JiraApiService {
     transform: any,
     jiraCfg: JiraCfg,
   ): Observable<any> {
+    if (!this._isExtension) {
+      return fromPromise(
+        fetch(url, requestInit)
+          .then((response) => response.body)
+          .then(streamToJsonIfPossible as any)
+          .then((res) =>
+            transform ? transform({ response: res }, jiraCfg) : { response: res },
+          ),
+      ).pipe(
+        catchError((err) => {
+          console.log(err);
+          console.log(getErrorTxt(err));
+          const errTxt = `Jira: ${getErrorTxt(err)}`;
+          this._snackService.open({ type: 'ERROR', msg: errTxt });
+          return throwError({ [HANDLED_ERROR_PROP_STR]: errTxt });
+        }),
+      );
+    }
+
     // TODO refactor to observable for request canceling etc
     let promiseResolve;
     let promiseReject;
@@ -436,6 +513,8 @@ export class JiraApiService {
         'SP_JIRA_REQUEST',
         requestToSend,
       );
+    } else {
+      throw new Error('Jira: No valid interface found');
     }
 
     this._globalProgressBarService.countUp(url);
@@ -616,5 +695,35 @@ export class JiraApiService {
       return btoa(str);
     }
     throw new Error('Jira: btoo not supported');
+  }
+}
+
+// eslint-disable-next-line prefer-arrow/prefer-arrow-functions
+async function streamToString(stream: ReadableStream): Promise<string> {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let result = '';
+  let done = false;
+
+  while (!done) {
+    const { value, done: doneReading } = await reader.read();
+    done = doneReading;
+    if (value) {
+      result += decoder.decode(value, { stream: true });
+    }
+  }
+
+  result += decoder.decode(); // flush the decoder
+  return result;
+}
+
+// eslint-disable-next-line prefer-arrow/prefer-arrow-functions
+async function streamToJsonIfPossible(stream: ReadableStream): Promise<any> {
+  const text = await streamToString(stream);
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    console.error('Jira: Could not parse response', text);
+    return text;
   }
 }

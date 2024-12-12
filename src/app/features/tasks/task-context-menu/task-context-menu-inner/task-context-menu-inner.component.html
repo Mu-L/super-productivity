@@ -34,9 +34,9 @@
       (click)="quickAccessBtnClick(0)"
       [matTooltip]="(T.F.TASK.D_SCHEDULE_TASK.QA_TODAY|translate)"
     >
-      <mat-icon *ngIf="isTaskPlannedForToday()">wb_sunny</mat-icon>
+      <mat-icon *ngIf="isShowAddToToday()">wb_sunny</mat-icon>
       <mat-icon
-        *ngIf="isTaskNotPlannedForToday()"
+        *ngIf="isShowRemoveFromToday()"
         svgIcon="remove_today"
       ></mat-icon>
     </button>
@@ -197,7 +197,7 @@
 
   <!--TODO maybe handle dynamically -->
   <a
-    *ngIf="task.issueId && task.issueType !=='CALENDAR'"
+    *ngIf="task.issueId && task.issueType !==ICAL_TYPE"
     [href]="issueUrl$|async"
     mat-menu-item
     style="color: inherit"
@@ -209,7 +209,7 @@
 
   <button
     (click)="updateIssueData()"
-    *ngIf="task.issueId && task.issueType !=='CALENDAR'"
+    *ngIf="task.issueId && task.issueType !==ICAL_TYPE"
     mat-menu-item
   >
     <mat-icon [svgIcon]="task.issueType|issueIcon"></mat-icon>
@@ -252,7 +252,7 @@
   </button>
 
   <button
-    *ngIf="!task.parentId && (!task.issueId || task.issueType ==='CALENDAR') && !task.repeatCfgId && (moveToProjectList$|async)?.length > 0"
+    *ngIf="!task.parentId && !task.repeatCfgId && (moveToProjectList$|async)?.length > 0"
     [matMenuTriggerFor]="projectMenu"
     mat-menu-item
   >

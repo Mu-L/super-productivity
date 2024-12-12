@@ -4,6 +4,8 @@ import {
 } from 'src/app/features/config/global-config.model';
 import { T } from 'src/app/t.const';
 import { RedmineCfg } from './redmine.model';
+import { IssueProviderRedmine } from '../../issue.model';
+import { ISSUE_PROVIDER_COMMON_FORM_FIELDS } from '../../common-issue-form-stuff.const';
 
 export const REDMINE_POLL_INTERVAL = 5 * 60 * 1000;
 export const REDMINE_INITIAL_POLL_DELAY = 8 * 1000;
@@ -25,11 +27,11 @@ export enum ScopeOptions {
   assignedToMe = 'assigned-to-me',
 }
 
-export const REDMINE_CONFIG_FORM: LimitedFormlyFieldConfig<RedmineCfg>[] = [
+export const REDMINE_CONFIG_FORM: LimitedFormlyFieldConfig<IssueProviderRedmine>[] = [
   {
     key: 'host',
     type: 'input',
-    hideExpression: (model: any) => !model.isEnabled,
+
     templateOptions: {
       label: T.F.REDMINE.FORM.HOST,
       type: 'text',
@@ -40,7 +42,7 @@ export const REDMINE_CONFIG_FORM: LimitedFormlyFieldConfig<RedmineCfg>[] = [
   {
     key: 'api_key',
     type: 'input',
-    hideExpression: (model: any) => !model.isEnabled,
+
     templateOptions: {
       label: T.F.REDMINE.FORM.API_KEY,
       required: true,
@@ -50,7 +52,7 @@ export const REDMINE_CONFIG_FORM: LimitedFormlyFieldConfig<RedmineCfg>[] = [
   {
     key: 'projectId',
     type: 'input',
-    hideExpression: (model: any) => !model.isEnabled,
+
     templateOptions: {
       label: T.F.REDMINE.FORM.PROJECT_ID,
       type: 'text',
@@ -62,7 +64,7 @@ export const REDMINE_CONFIG_FORM: LimitedFormlyFieldConfig<RedmineCfg>[] = [
     key: 'scope',
     type: 'select',
     defaultValue: 'assigned-to-me',
-    hideExpression: (model: any) => !model.isEnabled,
+
     templateOptions: {
       required: true,
       label: T.F.REDMINE.FORM.SCOPE,
@@ -74,32 +76,14 @@ export const REDMINE_CONFIG_FORM: LimitedFormlyFieldConfig<RedmineCfg>[] = [
     },
   },
   {
-    key: 'isSearchIssuesFromRedmine',
-    type: 'checkbox',
-    hideExpression: (model: any) => !model.isEnabled,
-    templateOptions: {
-      label: T.F.REDMINE.FORM.IS_SEARCH_ISSUES_FROM_REDMINE,
-    },
-  },
-  {
-    key: 'isAutoPoll',
-    type: 'checkbox',
-    hideExpression: (model: any) => !model.isEnabled,
-    templateOptions: {
-      label: T.F.REDMINE.FORM.IS_AUTO_POLL,
-    },
-  },
-  {
-    key: 'isAutoAddToBacklog',
-    type: 'checkbox',
-    hideExpression: (model: any) => !model.isEnabled,
-    templateOptions: {
-      label: T.F.REDMINE.FORM.IS_AUTO_IMPORT_ISSUES,
-    },
+    type: 'collapsible',
+    // todo translate
+    props: { label: 'Advanced Config' },
+    fieldGroup: [...ISSUE_PROVIDER_COMMON_FORM_FIELDS],
   },
 ];
 
-export const REDMINE_CONFIG_FORM_SECTION: ConfigFormSection<RedmineCfg> = {
+export const REDMINE_CONFIG_FORM_SECTION: ConfigFormSection<IssueProviderRedmine> = {
   title: T.F.REDMINE.FORM_SECTION.TITLE,
   key: 'REDMINE',
   items: REDMINE_CONFIG_FORM,

@@ -2,17 +2,19 @@ import { Injectable } from '@angular/core';
 import {
   IssueData,
   IssueDataReduced,
+  IssueProvider,
   IssueProviderKey,
   SearchResultItem,
+  SearchResultItemWithProviderId,
 } from './issue.model';
 import { TaskAttachment } from '../tasks/task-attachment/task-attachment.model';
-import { from, merge, Observable, of, Subject, zip } from 'rxjs';
+import { forkJoin, merge, Observable, of, Subject } from 'rxjs';
 import {
   CALDAV_TYPE,
-  CALENDAR_TYPE,
   GITEA_TYPE,
   GITHUB_TYPE,
   GITLAB_TYPE,
+  ICAL_TYPE,
   ISSUE_PROVIDER_HUMANIZED,
   ISSUE_PROVIDER_ICON_MAP,
   ISSUE_STR_MAP,
@@ -21,11 +23,11 @@ import {
   REDMINE_TYPE,
 } from './issue.const';
 import { TaskService } from '../tasks/task.service';
-import { Task } from '../tasks/task.model';
+import { Task, TaskCopy } from '../tasks/task.model';
 import { IssueServiceInterface } from './issue-service-interface';
 import { JiraCommonInterfacesService } from './providers/jira/jira-common-interfaces.service';
 import { GithubCommonInterfacesService } from './providers/github/github-common-interfaces.service';
-import { switchMap } from 'rxjs/operators';
+import { catchError, map, switchMap } from 'rxjs/operators';
 import { GitlabCommonInterfacesService } from './providers/gitlab/gitlab-common-interfaces.service';
 import { CaldavCommonInterfacesService } from './providers/caldav/caldav-common-interfaces.service';
 import { OpenProjectCommonInterfacesService } from './providers/open-project/open-project-common-interfaces.service';
@@ -35,6 +37,14 @@ import { SnackService } from '../../core/snack/snack.service';
 import { T } from '../../t.const';
 import { TranslateService } from '@ngx-translate/core';
 import { CalendarCommonInterfacesService } from './providers/calendar/calendar-common-interfaces.service';
+import { WorkContextType } from '../work-context/work-context.model';
+import { WorkContextService } from '../work-context/work-context.service';
+import { ProjectService } from '../project/project.service';
+import { IssueProviderService } from './issue-provider.service';
+import { CalendarIntegrationService } from '../calendar-integration/calendar-integration.service';
+import { Store } from '@ngrx/store';
+import { selectEnabledIssueProviders } from './store/issue-provider.selectors';
+import { getErrorTxt } from '../../util/get-error-text';
 
 @Injectable({
   providedIn: 'root',
@@ -48,7 +58,7 @@ export class IssueService {
     [OPEN_PROJECT_TYPE]: this._openProjectInterfaceService,
     [GITEA_TYPE]: this._giteaInterfaceService,
     [REDMINE_TYPE]: this._redmineInterfaceService,
-    [CALENDAR_TYPE]: this._calendarCommonInterfaceService,
+    [ICAL_TYPE]: this._calendarCommonInterfaceService,
   };
 
   // NOTE: in theory we might need to clean this up on project change, but it's unlikely to matter
@@ -61,7 +71,7 @@ export class IssueService {
     [OPEN_PROJECT_TYPE]: {},
     [GITEA_TYPE]: {},
     [REDMINE_TYPE]: {},
-    [CALENDAR_TYPE]: {},
+    [ICAL_TYPE]: {},
   };
 
   constructor(
@@ -74,64 +84,88 @@ export class IssueService {
     private _giteaInterfaceService: GiteaCommonInterfacesService,
     private _redmineInterfaceService: RedmineCommonInterfacesService,
     private _calendarCommonInterfaceService: CalendarCommonInterfacesService,
+    private _issueProviderService: IssueProviderService,
+    private _workContextService: WorkContextService,
     private _snackService: SnackService,
     private _translateService: TranslateService,
+    private _projectService: ProjectService,
+    private _calendarIntegrationService: CalendarIntegrationService,
+    private _store: Store,
   ) {}
+
+  testConnection$(issueProviderCfg: IssueProvider): Observable<boolean> {
+    return this.ISSUE_SERVICE_MAP[issueProviderCfg.issueProviderKey].testConnection$(
+      issueProviderCfg,
+    );
+  }
 
   getById$(
     issueType: IssueProviderKey,
     id: string | number,
-    projectId: string,
-  ): Observable<IssueData> {
-    // account for issue refreshment
+    issueProviderId: string,
+  ): Observable<IssueData | null> {
+    // account for (manual) issue refreshing
     if (!this.ISSUE_REFRESH_MAP[issueType][id]) {
       this.ISSUE_REFRESH_MAP[issueType][id] = new Subject<IssueData>();
     }
     return this.ISSUE_SERVICE_MAP[issueType]
-      .getById$(id, projectId)
+      .getById$(id, issueProviderId)
       .pipe(
         switchMap((issue) =>
-          merge<IssueData>(of(issue), this.ISSUE_REFRESH_MAP[issueType][id]),
+          merge<IssueData | null>(of(issue), this.ISSUE_REFRESH_MAP[issueType][id]),
         ),
       );
   }
 
-  searchIssues$(searchTerm: string, projectId: string): Observable<SearchResultItem[]> {
-    const obs = Object.keys(this.ISSUE_SERVICE_MAP)
-      .map((key) => this.ISSUE_SERVICE_MAP[key])
-      .filter((provider) => typeof provider.searchIssues$ === 'function')
-      .map((provider) => (provider.searchIssues$ as any)(searchTerm, projectId));
-    obs.unshift(from([[]]));
+  searchIssues$(
+    searchTerm: string,
+    issueProviderId: string,
+    issueProviderKey: IssueProviderKey,
+  ): Observable<SearchResultItem[]> {
+    return this.ISSUE_SERVICE_MAP[issueProviderKey].searchIssues$(
+      searchTerm,
+      issueProviderId,
+    );
+  }
 
-    return zip(...obs, (...allResults: any[]) => [].concat(...allResults)) as Observable<
-      SearchResultItem[]
-    >;
+  searchAllEnabledIssueProviders$(
+    searchTerm: string,
+  ): Observable<SearchResultItemWithProviderId[]> {
+    return this._store.select(selectEnabledIssueProviders).pipe(
+      switchMap((enabledProviders) => {
+        const searchObservables = enabledProviders.map((provider) =>
+          this.searchIssues$(searchTerm, provider.id, provider.issueProviderKey).pipe(
+            map((results) =>
+              results.map((result) => ({
+                ...result,
+                issueProviderId: provider.id,
+              })),
+            ),
+            catchError((err) => {
+              this._snackService.open({
+                svgIco: ISSUE_PROVIDER_ICON_MAP[provider.issueProviderKey],
+                msg: T.F.ISSUE.S.ERR_GENERIC,
+                type: 'ERROR',
+                translateParams: {
+                  issueProviderName: ISSUE_PROVIDER_HUMANIZED[provider.issueProviderKey],
+                  errTxt: getErrorTxt(err),
+                },
+              });
+              throw new Error(err);
+            }),
+          ),
+        );
+        return forkJoin(searchObservables).pipe(map((results) => results.flat()));
+      }),
+    );
   }
 
   issueLink$(
     issueType: IssueProviderKey,
     issueId: string | number,
-    projectId: string,
+    issueProviderId: string,
   ): Observable<string> {
-    return this.ISSUE_SERVICE_MAP[issueType].issueLink$(issueId, projectId);
-  }
-
-  isBacklogPollEnabledForProjectOnce$(
-    providerKey: IssueProviderKey,
-    projectId: string,
-  ): Observable<boolean> {
-    return this.ISSUE_SERVICE_MAP[providerKey].isBacklogPollingEnabledForProjectOnce$(
-      projectId,
-    );
-  }
-
-  isPollIssueChangesEnabledForProjectOnce$(
-    providerKey: IssueProviderKey,
-    projectId: string,
-  ): Observable<boolean> {
-    return this.ISSUE_SERVICE_MAP[providerKey].isIssueRefreshEnabledForProjectOnce$(
-      projectId,
-    );
+    return this.ISSUE_SERVICE_MAP[issueType].issueLink$(issueId, issueProviderId);
   }
 
   getPollTimer$(providerKey: IssueProviderKey): Observable<number> {
@@ -150,7 +184,7 @@ export class IssueService {
 
   async checkAndImportNewIssuesToBacklogForProject(
     providerKey: IssueProviderKey,
-    projectId: string,
+    issueProviderId: string,
   ): Promise<void> {
     if (!this.ISSUE_SERVICE_MAP[providerKey].getNewIssuesToAddToBacklog) {
       return;
@@ -166,11 +200,11 @@ export class IssueService {
     });
 
     const allExistingIssueIds: string[] | number[] =
-      await this._taskService.getAllIssueIdsForProject(projectId, providerKey);
+      await this._taskService.getAllIssueIdsForProject(issueProviderId, providerKey);
 
     const potentialIssuesToAdd = await (
       this.ISSUE_SERVICE_MAP[providerKey] as any
-    ).getNewIssuesToAddToBacklog(projectId, allExistingIssueIds);
+    ).getNewIssuesToAddToBacklog(issueProviderId, allExistingIssueIds);
 
     const issuesToAdd: IssueDataReduced[] = potentialIssuesToAdd.filter(
       (issue: IssueData): boolean =>
@@ -178,7 +212,13 @@ export class IssueService {
     );
 
     issuesToAdd.forEach((issue: IssueDataReduced) => {
-      this.addTaskWithIssue(providerKey, issue, projectId, true);
+      // TODO add correct project id
+      this.addTaskFromIssue({
+        issueDataReduced: issue,
+        issueProviderId,
+        issueProviderKey: providerKey,
+        isAddToBacklog: true,
+      });
     });
 
     if (issuesToAdd.length === 1) {
@@ -216,9 +256,9 @@ export class IssueService {
     isNotifySuccess: boolean = true,
     isNotifyNoUpdateRequired: boolean = false,
   ): Promise<void> {
-    const { issueId, issueType, projectId } = task;
+    const { issueId, issueType, issueProviderId } = task;
 
-    if (!issueId || !issueType || !projectId) {
+    if (!issueId || !issueType || !issueProviderId) {
       throw new Error('No issue task');
     }
     if (!this.ISSUE_SERVICE_MAP[issueType].getFreshDataForIssueTask) {
@@ -257,7 +297,8 @@ export class IssueService {
     }
   }
 
-  async refreshIssueTasks(tasks: Task[]): Promise<void> {
+  // TODO given we have issueProvider available, we could also just pass that
+  async refreshIssueTasks(tasks: Task[], issueProvider: IssueProvider): Promise<void> {
     // dynamic map that has a list of tasks for every entry where the entry is an issue type
     const tasksIssueIdsByIssueProviderKey: any = {};
     const tasksWithoutIssueId: Readonly<Task>[] = [];
@@ -295,8 +336,7 @@ export class IssueService {
         task: Task;
         taskChanges: Partial<Task>;
         issue: IssueData;
-      }[] = await // TODO export fn to type instead
-      (this.ISSUE_SERVICE_MAP[providerKey].getFreshDataForIssueTasks as any)(
+      }[] = await this.ISSUE_SERVICE_MAP[providerKey].getFreshDataForIssueTasks(
         tasksIssueIdsByIssueProviderKey[providerKey],
       );
 
@@ -343,39 +383,155 @@ export class IssueService {
     }
   }
 
-  async addTaskWithIssue(
-    issueType: IssueProviderKey,
-    issueIdOrData: string | number | IssueDataReduced,
-    projectId: string,
-    isAddToBacklog: boolean = false,
-  ): Promise<string> {
-    if (!this.ISSUE_SERVICE_MAP[issueType].getAddTaskData) {
+  async addTaskFromIssue({
+    issueDataReduced,
+    issueProviderId,
+    issueProviderKey,
+    additional = {},
+    isAddToBacklog = false,
+    isForceDefaultProject = false,
+  }: {
+    issueDataReduced: IssueDataReduced;
+    issueProviderId: string;
+    issueProviderKey: IssueProviderKey;
+    additional?: Partial<Task>;
+    isAddToBacklog?: boolean;
+    isForceDefaultProject?: boolean;
+  }): Promise<string | undefined> {
+    if (!issueDataReduced || !issueDataReduced.id || !issueProviderId) {
+      throw new Error('No issueData');
+    }
+
+    if (!this.ISSUE_SERVICE_MAP[issueProviderKey].getAddTaskData) {
       throw new Error('Issue method not available');
     }
-    const { issueId, issueData } =
-      typeof issueIdOrData === 'number' || typeof issueIdOrData === 'string'
-        ? {
-            issueId: issueIdOrData,
-            issueData: await this.ISSUE_SERVICE_MAP[issueType]
-              .getById$(issueIdOrData, projectId)
-              .toPromise(),
-          }
-        : {
-            issueId: issueIdOrData.id,
-            issueData: issueIdOrData,
-          };
 
-    const { title = null, ...additionalFields } =
-      this.ISSUE_SERVICE_MAP[issueType].getAddTaskData(issueData);
+    if (
+      await this._checkAndHandleIssueAlreadyAdded(
+        issueProviderKey,
+        issueProviderId,
+        issueDataReduced.id.toString(),
+      )
+    ) {
+      return undefined;
+    }
 
-    return this._taskService.add(title, isAddToBacklog, {
-      issueType,
-      issueId: issueId as string,
+    const { title = null, ...additionalFromProviderIssueService } =
+      this.ISSUE_SERVICE_MAP[issueProviderKey].getAddTaskData(issueDataReduced);
+    console.log({ title, additionalFromProviderIssueService });
+
+    const getProjectOrTagId = async (): Promise<Partial<TaskCopy>> => {
+      if (
+        this._workContextService.activeWorkContextType === WorkContextType.PROJECT &&
+        !isForceDefaultProject
+      ) {
+        return { projectId: this._workContextService.activeWorkContextId as string };
+      } else {
+        const defaultProjectId = (
+          await this._issueProviderService
+            .getCfgOnce$(issueProviderId, issueProviderKey)
+            .toPromise()
+        ).defaultProjectId;
+
+        return {
+          tagIds:
+            this._workContextService.activeWorkContextType === WorkContextType.TAG
+              ? [this._workContextService.activeWorkContextId as string]
+              : [],
+          projectId: defaultProjectId,
+        };
+      }
+    };
+
+    const taskData = {
+      issueType: issueProviderKey,
+      issueProviderId: issueProviderId,
+      issueId: issueDataReduced.id.toString(),
       issueWasUpdated: false,
       issueLastUpdated: Date.now(),
-      ...additionalFields,
-      // this is very important as chances are we are in another context already when adding!
-      projectId,
-    });
+      ...additionalFromProviderIssueService,
+      // NOTE: if we were to add tags, this could be overwritten here
+      ...(await getProjectOrTagId()),
+      ...additional,
+    };
+
+    const taskId = taskData.plannedAt
+      ? await this._taskService.addAndSchedule(title, taskData, taskData.plannedAt)
+      : this._taskService.add(title, isAddToBacklog, taskData);
+
+    // TODO more elegant solution for skipped calendar events
+    if (issueProviderKey === ICAL_TYPE) {
+      this._calendarIntegrationService.skipCalendarEvent(issueDataReduced.id.toString());
+    }
+
+    return taskId;
   }
+
+  private async _checkAndHandleIssueAlreadyAdded(
+    issueType: IssueProviderKey,
+    issueProviderId: string,
+    issueId: string,
+  ): Promise<boolean> {
+    const res = await this._taskService.checkForTaskWithIssueEverywhere(
+      issueId,
+      issueType,
+      issueProviderId,
+    );
+    if (res?.isFromArchive) {
+      this._taskService.restoreTask(res.task, res.subTasks || []);
+      this._snackService.open({
+        ico: 'info',
+        msg: T.F.TASK.S.FOUND_RESTORE_FROM_ARCHIVE,
+        translateParams: { title: res.task.title },
+      });
+      return true;
+    } else if (res?.task) {
+      if (
+        res.task.projectId &&
+        res.task.projectId === this._workContextService.activeWorkContextId
+      ) {
+        this._projectService.moveTaskToTodayList(res.task.id, res.task.projectId);
+        this._snackService.open({
+          ico: 'arrow_upward',
+          msg: T.F.TASK.S.FOUND_MOVE_FROM_BACKLOG,
+          translateParams: { title: res.task.title },
+        });
+        return true;
+      } else {
+        const taskWithTaskSubTasks = await this._taskService
+          .getByIdWithSubTaskData$(res.task.id)
+          .toPromise();
+        this._taskService.moveToCurrentWorkContext(taskWithTaskSubTasks);
+        this._snackService.open({
+          ico: 'arrow_upward',
+          msg: T.F.TASK.S.FOUND_MOVE_FROM_OTHER_LIST,
+          translateParams: {
+            title: res.task.title,
+            contextTitle: res.task.projectId
+              ? (await this._projectService.getByIdOnce$(res.task.projectId).toPromise())
+                  ?.title
+              : 'another tag',
+          },
+        });
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  // TODO if we need to refresh data on after add, this is how we would do it
+  // try {
+  //   const freshIssueData = await this.ISSUE_SERVICE_MAP[issueProviderKey]
+  //     .getById$(issueDataReduced.issueData.id, issueProvider.id)
+  //     .toPromise();
+  //   // eslint-disable-next-line @typescript-eslint/no-shadow
+  //   const { title = null, ...additionalFields } =
+  //     this.ISSUE_SERVICE_MAP[issueProviderKey].getAddTaskData(freshIssueData);
+  //   this._taskService.update(taskId, {});
+  // } catch (e) {
+  //   console.error(e);
+  //   this._taskService.remove(taskId);
+  //   // TODO show error msg
+  // }
 }

@@ -22,7 +22,6 @@ import {
   unarchiveProject,
   updateProject,
   updateProjectAdvancedCfg,
-  updateProjectIssueProviderCfg,
   updateProjectOrder,
   updateProjectWorkEnd,
   updateProjectWorkStart,
@@ -77,7 +76,6 @@ export class ProjectEffects {
           deleteProject.type,
           updateProject.type,
           updateProjectAdvancedCfg.type,
-          updateProjectIssueProviderCfg.type,
           updateProjectWorkStart.type,
           updateProjectWorkEnd.type,
           addToProjectBreakTime.type,
@@ -252,18 +250,6 @@ export class ProjectEffects {
           if (id === cfg.misc.defaultProjectId) {
             this._globalConfigService.updateSection('misc', { defaultProjectId: null });
           }
-          if (
-            cfg.calendarIntegration.calendarProviders.find(
-              (p) => p.defaultProjectId === id,
-            )
-          ) {
-            this._globalConfigService.updateSection('calendarIntegration', {
-              ...cfg.calendarIntegration,
-              calendarProviders: cfg.calendarIntegration.calendarProviders.map((p) =>
-                p.defaultProjectId === id ? { ...p, defaultProjectId: null } : p,
-              ),
-            });
-          }
         }),
       ),
     { dispatch: false },
@@ -316,23 +302,6 @@ export class ProjectEffects {
 
   // PURE SNACKS
   // -----------
-
-  snackUpdateIssueProvider$: Observable<unknown> = createEffect(
-    () =>
-      this._actions$.pipe(
-        ofType(updateProjectIssueProviderCfg.type),
-        tap(({ issueProviderKey }) => {
-          this._snackService.open({
-            type: 'SUCCESS',
-            msg: T.F.PROJECT.S.ISSUE_PROVIDER_UPDATED,
-            translateParams: {
-              issueProviderKey,
-            },
-          });
-        }),
-      ),
-    { dispatch: false },
-  );
 
   snackUpdateBaseSettings$: Observable<unknown> = createEffect(
     () =>

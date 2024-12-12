@@ -63,10 +63,8 @@ import { combineDateAndTime } from '../../../../util/combine-date-and-time';
 import { FocusModeService } from '../../../focus-mode/focus-mode.service';
 import { isToday } from '../../../../util/is-today.util';
 import { DateAdapter } from '@angular/material/core';
-import {
-  isTaskPlannedForToday,
-  isTaskNotPlannedForToday,
-} from '../../util/is-task-today';
+import { isShowAddToToday, isShowRemoveFromToday } from '../../util/is-task-today';
+import { ICAL_TYPE } from '../../../issue/issue.const';
 
 @Component({
   selector: 'task-context-menu-inner',
@@ -113,8 +111,8 @@ export class TaskContextMenuInnerComponent implements AfterViewInit {
   private _task$: ReplaySubject<TaskWithSubTasks | Task> = new ReplaySubject(1);
   issueUrl$: Observable<string | null> = this._task$.pipe(
     switchMap((v) => {
-      return v.issueType && v.issueId && v.projectId
-        ? this._issueService.issueLink$(v.issueType, v.issueId, v.projectId)
+      return v.issueType && v.issueId && v.issueProviderId
+        ? this._issueService.issueLink$(v.issueType, v.issueId, v.issueProviderId)
         : of(null);
     }),
     take(1),
@@ -358,13 +356,6 @@ export class TaskContextMenuInnerComponent implements AfterViewInit {
   async moveTaskToProject(projectId: string): Promise<void> {
     if (projectId === this.task.projectId) {
       return;
-    } else if (this.task.issueId && this.task.issueType !== 'CALENDAR') {
-      this._snackService.open({
-        type: 'CUSTOM',
-        ico: 'block',
-        msg: T.F.TASK.S.MOVE_TO_PROJECT_NOT_ALLOWED_FOR_ISSUE_TASK,
-      });
-      return;
     } else if (!this.task.repeatCfgId) {
       const taskWithSubTasks = await this._getTaskWithSubtasks();
       this._taskService.moveToProject(taskWithSubTasks, projectId);
@@ -548,7 +539,7 @@ export class TaskContextMenuInnerComponent implements AfterViewInit {
         );
       }
     } else if (newDay === getWorklogStr()) {
-      if (this.isTaskPlannedForToday()) {
+      if (this.isShowAddToToday()) {
         this.addToMyDay();
 
         this._snackService.open({
@@ -571,11 +562,13 @@ export class TaskContextMenuInnerComponent implements AfterViewInit {
     }
   }
 
-  isTaskNotPlannedForToday(): boolean {
-    return isTaskNotPlannedForToday(this.task);
+  isShowRemoveFromToday(): boolean {
+    return isShowRemoveFromToday(this.task);
   }
 
-  isTaskPlannedForToday(): boolean {
-    return isTaskPlannedForToday(this.task, this.workContextService.isToday);
+  isShowAddToToday(): boolean {
+    return isShowAddToToday(this.task, this.workContextService.isToday);
   }
+
+  protected readonly ICAL_TYPE = ICAL_TYPE;
 }
