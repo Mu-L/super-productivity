@@ -104,6 +104,7 @@
   - Need some extra focus? A **Pomodoro timer** is also always at hand.
   - **Collect personal metrics** to see, which of your work routines need adjustments.
 - Integrate with **Jira**, **GitHub**, **GitLab**, **Gitea** and **OpenProject**. Auto import tasks assigned to you, plan the details locally, automatically create work logs, and get notified immediately, when something changes.
+- Back up and synchronize your data across multiple devices with **Dropbox** and **WebDAV** support
 - Attach context information to tasks and projects. Create **notes**, attach **files** or create **project-level bookmarks** for links, files, and even commands.
 - Super Productivity **respects your privacy** and **does NOT collect any data** and there are no user accounts or registration. **You decide where you store your data!**
 - It's **free** and **open source** and always will be.
@@ -245,7 +246,7 @@ You can find the Android app here:
        height="50" />
 </a>
 
-The sources can be [found here](https://github.com/johannesjo/super-productivity-android).
+The sources can be [found here](/android).
 
 ## :hearts: Contributing
 
@@ -319,7 +320,7 @@ Packaging the app is done via [electron-builder](https://github.com/electron-use
 
 _This feature was added on October 7, 2024. See [Pull Request #57](https://github.com/johannesjo/super-productivity-android/pull/57)._
 
-To build the Android version of Super Productivity, please refer to the [Android Build Documentation](./android/offline.md), which includes instructions on configuring **Connectivity-Free Mode** and **Online-Only Mode (Compatibility Mode)**.
+To build the Android version of Super Productivity, please refer to the [Android Build Documentation](./android/README.md), which includes instructions on configuring **Connectivity-Free Mode** and **Online-Only Mode (Compatibility Mode)**.
 
 Ensure you follow the setup steps properly to configure the environment for building the app.
 
@@ -328,6 +329,11 @@ Ensure you follow the setup steps properly to configure the environment for buil
 ```bash
 docker run -d -p 80:80 johannesjo/super-productivity:latest
 ```
+
+> [!NOTE]
+> The command will automatically pull the container that matches the host's platform. Use `--platform` to specify a different one.
+>
+> Currently supported architectures: `linux/amd64`, `linux/arm64`, `linux/arm/v7`.
 
 Now you can access the web app from your browser at `http://localhost`.
 

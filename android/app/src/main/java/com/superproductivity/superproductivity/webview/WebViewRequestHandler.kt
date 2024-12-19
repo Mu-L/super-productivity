@@ -7,7 +7,6 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.util.Log
-import com.superproductivity.superproductivity.BuildConfig
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.ByteArrayInputStream
@@ -34,6 +33,7 @@ class WebViewRequestHandler(private val activity: Activity, private val serviceH
             false
         }
     }
+
 
     fun interceptWebRequest(request: WebResourceRequest?): WebResourceResponse? {
         try {
@@ -64,70 +64,38 @@ class WebViewRequestHandler(private val activity: Activity, private val serviceH
                 return null
             }
 
-            // remove user agent header in the hopes that we're treated better by the remotes :D
-            val keysToRemove =
-                request.requestHeaders.keys.filter { it.equals("User-Agent", ignoreCase = true) }
-            for (key in keysToRemove) {
-                request.requestHeaders.remove(key)
-            }
-
             val client = OkHttpClient()
             val newRequestBuilder = Request.Builder()
                 .url(request.url.toString())
                 .method(request.method, null)
 
-            // Add each header from the original request to the new request
             for ((key, value) in request.requestHeaders) {
+                Log.v("TW", "interceptRequest header:${key} – ${value}")
+                if (key == "User-Agent" || key == "Origin" || key == "Referer" || key == "Sec-Fetch-Mode") {
+                    continue
+                }
                 newRequestBuilder.addHeader(key, value)
             }
+
+            newRequestBuilder.header("User-Agent", "curl/7.64.1")
             val newRequest = newRequestBuilder.build()
 
-            // currently we can't handle POST requests since everything
             if (request.method.uppercase() == "OPTIONS") {
                 Log.v("TW", "OPTIONS request triggered")
-                client.newCall(newRequest).execute().use { response ->
-                    Log.v(
-                        "TW",
-                        "OPTIONS original response: ${response.code} ${response.message} ${response.body?.string()}"
-                    )
-                    if (response.code != 200) {
-                        Log.v("TW", "OPTIONS overwrite")
-                        return OptionsAllowResponse.build()
-                    }
-                }
+                return OptionsAllowResponse.build()
+                // to execute actual OPTIONS request uncomment the following lines
+//                client.newCall(newRequest).execute().use { response ->
+//                    Log.v(
+//                        "TW",
+//                        "OPTIONS original response: ${response.code} ${response.message} ${response.body?.string()}"
+//                    )
+//                    if (response.code != 200) {
+//                        Log.v("TW", "OPTIONS overwrite")
+//                        return OptionsAllowResponse.build()
+//                    }
+//                }
             }
-
-
-            // Handle HEAD requests
-            if (request.method.uppercase() == "HEAD") {
-                Log.v("TW", "HEAD request triggered")
-                client.newCall(newRequest).execute().use { response ->
-                    Log.v("TW", "HEAD response ${response.code} ${response.message}")
-                    val responseHeaders = response.headers.names()
-                        .associateWith { response.headers(it)?.joinToString() }
-                        .toMutableMap()
-
-                    val keysToRemoveI = responseHeaders.keys.filter {
-                        it.equals("Access-Control-Allow-Origin", ignoreCase = true)
-                    }
-                    for (key in keysToRemoveI) {
-                        responseHeaders.remove(key)
-                    }
-                    responseHeaders["Access-Control-Allow-Origin"] = "*"
-
-                    val contentType = response.header("Content-Type", "text/plain")
-                    val contentEncoding = response.header("Content-Encoding", "utf-8")
-                    val reasonPhrase = response.message.ifEmpty { "OK" }
-                    return WebResourceResponse(
-                        contentType,
-                        contentEncoding,
-                        response.code,
-                        reasonPhrase,
-                        responseHeaders,
-                        null
-                    )
-                }
-            }
+            //-------------
 
 
             Log.v("TW", "exec request ${request.url}")
@@ -137,23 +105,20 @@ class WebViewRequestHandler(private val activity: Activity, private val serviceH
                     .associateWith { response.headers(it)?.joinToString() }
                     .toMutableMap()
 
-                val keysToRemoveI =
-                    responseHeaders.keys.filter {
-                        it.equals(
-                            "Access-Control-Allow-Origin",
-                            ignoreCase = true
-                        )
-                    }
-                for (key in keysToRemoveI) {
-                    responseHeaders.remove(key)
-                }
-                responseHeaders["Access-Control-Allow-Origin"] = "*"
+                upsertKeyValue(responseHeaders, "Access-Control-Allow-Origin", "*")
+                upsertKeyValue(
+                    responseHeaders,
+                    "Access-Control-Allow-Methods",
+                    "GET, POST, OPTIONS"
+                )
 
                 val contentType = response.header("Content-Type", "text/plain")
                 val contentEncoding = response.header("Content-Encoding", "utf-8")
+
                 val inputStream = ByteArrayInputStream(response.body?.bytes())
                 val reasonPhrase =
                     response.message.ifEmpty { "OK" } // provide a default value if the message is null or empty
+
                 return WebResourceResponse(
                     contentType,
                     contentEncoding,
@@ -167,5 +132,23 @@ class WebViewRequestHandler(private val activity: Activity, private val serviceH
             Log.e("WebViewRequestHandler", "Error in interceptWebRequest => Not intercepting", e)
             return null
         }
+    }
+
+    fun upsertKeyValue(
+        responseHeaders: MutableMap<String, String?>,
+        keyToChange: String,
+        value: String
+    ): MutableMap<String, String?> {
+        val keyToChangeLower = keyToChange.lowercase()
+        for (key in responseHeaders.keys) {
+            if (key.lowercase() == keyToChangeLower) {
+                // Reassign old key
+                responseHeaders[key] = value
+                // Done
+                return responseHeaders
+            }
+        }
+        responseHeaders[keyToChange] = value
+        return responseHeaders
     }
 }

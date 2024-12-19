@@ -40,7 +40,6 @@ import { IS_ELECTRON, LanguageCode } from './app.constants';
 import { LanguageService } from './core/language/language.service';
 import { ConfigModule } from './features/config/config.module';
 import { ProjectModule } from './features/project/project.module';
-import { EntityDataModule } from '@ngrx/data';
 import { MaterialCssVarsModule } from 'angular-material-css-vars';
 import { WorkContextModule } from './features/work-context/work-context.module';
 import { undoTaskDeleteMetaReducer } from './root-store/meta/undo-task-delete.meta-reducer';
@@ -56,6 +55,8 @@ import { FocusModeModule } from './features/focus-mode/focus-mode.module';
 import { CalendarIntegrationModule } from './features/calendar-integration/calendar-integration.module';
 import { ShepherdComponent } from './features/shepherd/shepherd.component';
 import { CdkDropListGroup } from '@angular/cdk/drag-drop';
+import { IssuePanelModule } from './features/issue-panel/issue-panel.module';
+import { IS_ANDROID_WEB_VIEW } from './util/is-android-web-view';
 
 // NOTE: export required for aot to work
 export const createTranslateLoader = (http: HttpClient): TranslateHttpLoader =>
@@ -69,7 +70,7 @@ export const createTranslateLoader = (http: HttpClient): TranslateHttpLoader =>
     ConfigModule,
     ProjectModule,
     WorkContextModule,
-    // Local
+    // Other Local
     CoreModule,
     UiModule,
     CoreUiModule,
@@ -78,6 +79,7 @@ export const createTranslateLoader = (http: HttpClient): TranslateHttpLoader =>
     MatSidenavModule,
     ProcrastinationModule,
     IdleModule,
+    IssuePanelModule,
     TrackingReminderModule,
     ReminderModule,
     CoreUiModule,
@@ -130,7 +132,10 @@ export const createTranslateLoader = (http: HttpClient): TranslateHttpLoader =>
       validationMessages: [{ name: 'pattern', message: 'Invalid input' }],
     }),
     ServiceWorkerModule.register('ngsw-worker.js', {
-      enabled: !IS_ELECTRON && (environment.production || environment.stage),
+      enabled:
+        !IS_ELECTRON &&
+        !IS_ANDROID_WEB_VIEW &&
+        (environment.production || environment.stage),
       // Register the ServiceWorker as soon as the application is stable
       // or after 30 seconds (whichever comes first).
       registrationStrategy: 'registerWhenStable:30000',
@@ -142,7 +147,6 @@ export const createTranslateLoader = (http: HttpClient): TranslateHttpLoader =>
         deps: [HttpClient],
       },
     }),
-    EntityDataModule,
     CdkDropListGroup,
   ],
   providers: [

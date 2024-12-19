@@ -3,6 +3,7 @@ import { ProjectCfgFormKey } from '../project/project.model';
 import { LanguageCode, MODEL_VERSION_KEY } from '../../app.constants';
 import { SyncProvider } from '../../imex/sync/sync-provider.model';
 import { KeyboardConfig } from './keyboard-config.model';
+import { LegacyCalendarProvider } from '../issue/providers/calendar/calendar.model';
 
 export type DarkModeCfg = 'dark' | 'light' | 'system';
 
@@ -126,18 +127,8 @@ export type SyncConfig = Readonly<{
   webDav: WebDavConfig;
   localFileSync: LocalFileSyncConfig;
 }>;
-
-export type CalendarIntegrationConfig = Readonly<{
-  calendarProviders: CalendarProvider[];
-}>;
-export type CalendarProvider = Readonly<{
-  isEnabled: boolean;
-  id: string;
-  icalUrl: string;
-  icon?: string;
-  defaultProjectId: string | null;
-  checkUpdatesEvery: number;
-  showBannerBeforeThreshold: null | number;
+export type LegacyCalendarIntegrationConfig = Readonly<{
+  calendarProviders: LegacyCalendarProvider[];
 }>;
 
 export type ScheduleConfig = Readonly<{
@@ -185,7 +176,7 @@ export type GlobalConfigState = Readonly<{
   localBackup: LocalBackupConfig;
   sound: SoundConfig;
   timeTracking: TimeTrackingConfig;
-  calendarIntegration: CalendarIntegrationConfig;
+  calendarIntegration?: LegacyCalendarIntegrationConfig;
   reminder: ReminderConfig;
   schedule: ScheduleConfig;
   dominaMode: DominaModeConfig;
@@ -202,7 +193,6 @@ export type GlobalSectionConfig =
   | MiscConfig
   | PomodoroConfig
   | KeyboardConfig
-  | CalendarIntegrationConfig
   | ScheduleConfig
   | ReminderConfig
   | SyncConfig;

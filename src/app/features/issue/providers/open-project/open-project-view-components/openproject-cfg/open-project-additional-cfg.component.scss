@@ -1,0 +1,11 @@
+@import '../../../../../../../variables';
+
+.controls {
+  clear: both;
+  text-align: right;
+  margin-bottom: $s;
+}
+
+mat-slider {
+  width: 100%;
+}

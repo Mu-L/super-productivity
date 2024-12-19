@@ -4,6 +4,8 @@ import {
 } from 'src/app/features/config/global-config.model';
 import { T } from 'src/app/t.const';
 import { GiteaCfg } from './gitea.model';
+import { IssueProviderGitea } from '../../issue.model';
+import { ISSUE_PROVIDER_COMMON_FORM_FIELDS } from '../../common-issue-form-stuff.const';
 
 export const GITEA_POLL_INTERVAL = 5 * 60 * 1000;
 export const GITEA_INITIAL_POLL_DELAY = 8 * 1000;
@@ -13,9 +15,6 @@ export const DEFAULT_GITEA_CFG: GiteaCfg = {
   host: null,
   repoFullname: null,
   token: null,
-  isAutoPoll: false,
-  isSearchIssuesFromGitea: false,
-  isAutoAddToBacklog: false,
   scope: 'created-by-me',
 };
 
@@ -25,11 +24,10 @@ export enum ScopeOptions {
   assignedToMe = 'assigned-to-me',
 }
 
-export const GITEA_CONFIG_FORM: LimitedFormlyFieldConfig<GiteaCfg>[] = [
+export const GITEA_CONFIG_FORM: LimitedFormlyFieldConfig<IssueProviderGitea>[] = [
   {
     key: 'host',
     type: 'input',
-    hideExpression: (model: any) => !model.isEnabled,
     templateOptions: {
       label: T.F.GITEA.FORM.HOST,
       type: 'text',
@@ -40,7 +38,6 @@ export const GITEA_CONFIG_FORM: LimitedFormlyFieldConfig<GiteaCfg>[] = [
   {
     key: 'token',
     type: 'input',
-    hideExpression: (model: any) => !model.isEnabled,
     templateOptions: {
       label: T.F.GITEA.FORM.TOKEN,
       required: true,
@@ -49,7 +46,6 @@ export const GITEA_CONFIG_FORM: LimitedFormlyFieldConfig<GiteaCfg>[] = [
   },
   {
     type: 'link',
-    hideExpression: (model: any) => !model.isEnabled,
     templateOptions: {
       url: 'https://www.jetbrains.com/help/youtrack/cloud/integration-with-gitea.html#enable-youtrack-integration-gitea',
       txt: T.F.ISSUE.HOW_TO_GET_A_TOKEN,
@@ -58,7 +54,6 @@ export const GITEA_CONFIG_FORM: LimitedFormlyFieldConfig<GiteaCfg>[] = [
   {
     key: 'repoFullname',
     type: 'input',
-    hideExpression: (model: any) => !model.isEnabled,
     templateOptions: {
       label: T.F.GITEA.FORM.REPO_FULL_NAME,
       type: 'text',
@@ -70,7 +65,6 @@ export const GITEA_CONFIG_FORM: LimitedFormlyFieldConfig<GiteaCfg>[] = [
     key: 'scope',
     type: 'select',
     defaultValue: 'created-by-me',
-    hideExpression: (model: any) => !model.isEnabled,
     templateOptions: {
       required: true,
       label: T.F.GITEA.FORM.SCOPE,
@@ -82,32 +76,14 @@ export const GITEA_CONFIG_FORM: LimitedFormlyFieldConfig<GiteaCfg>[] = [
     },
   },
   {
-    key: 'isSearchIssuesFromGitea',
-    type: 'checkbox',
-    hideExpression: (model: any) => !model.isEnabled,
-    templateOptions: {
-      label: T.F.GITEA.FORM.IS_SEARCH_ISSUES_FROM_GITEA,
-    },
-  },
-  {
-    key: 'isAutoPoll',
-    type: 'checkbox',
-    hideExpression: (model: any) => !model.isEnabled,
-    templateOptions: {
-      label: T.F.GITEA.FORM.IS_AUTO_POLL,
-    },
-  },
-  {
-    key: 'isAutoAddToBacklog',
-    type: 'checkbox',
-    hideExpression: (model: any) => !model.isEnabled,
-    templateOptions: {
-      label: T.F.GITEA.FORM.IS_AUTO_IMPORT_ISSUES,
-    },
+    type: 'collapsible',
+    // todo translate
+    props: { label: 'Advanced Config' },
+    fieldGroup: [...ISSUE_PROVIDER_COMMON_FORM_FIELDS],
   },
 ];
 
-export const GITEA_CONFIG_FORM_SECTION: ConfigFormSection<GiteaCfg> = {
+export const GITEA_CONFIG_FORM_SECTION: ConfigFormSection<IssueProviderGitea> = {
   title: 'Gitea',
   key: 'GITEA',
   items: GITEA_CONFIG_FORM,

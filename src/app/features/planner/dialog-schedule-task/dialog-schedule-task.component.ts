@@ -38,15 +38,11 @@ import { first } from 'rxjs/operators';
 import { fadeAnimation } from '../../../ui/animations/fade.ani';
 import { dateStrToUtcDate } from '../../../util/date-str-to-utc-date';
 import { DateAdapter } from '@angular/material/core';
-import {
-  isTaskNotPlannedForToday,
-  isTaskPlannedForToday,
-} from '../../tasks/util/is-task-today';
+import { isShowAddToToday, isShowRemoveFromToday } from '../../tasks/util/is-task-today';
 import { WorkContextService } from '../../work-context/work-context.service';
 
 @Component({
   selector: 'dialog-schedule-task',
-  standalone: true,
   imports: [UiModule, CommonModule, FormsModule],
   templateUrl: './dialog-schedule-task.component.html',
   styleUrl: './dialog-schedule-task.component.scss',
@@ -181,11 +177,11 @@ export class DialogScheduleTaskComponent implements AfterViewInit {
     }
   }
 
-  addToMyDay(): void {
+  addToToday(): void {
     this._taskService.addTodayTag(this.data.task);
   }
 
-  removeFromMyDay(): void {
+  removeFromToday(): void {
     this._taskService.updateTags(
       this.data.task,
       this.data.task.tagIds.filter((tid) => tid !== TODAY_TAG.id),
@@ -276,7 +272,7 @@ export class DialogScheduleTaskComponent implements AfterViewInit {
     }
   }
 
-  submit(): void {
+  async submit(isRemoveFromToday = false): Promise<void> {
     if (!this.selectedDate) {
       console.warn('no selected date');
       return;
@@ -286,7 +282,9 @@ export class DialogScheduleTaskComponent implements AfterViewInit {
     const newDay = getWorklogStr(newDayDate);
     const formattedDate = this._datePipe.transform(newDay, 'shortDate') as string;
 
-    if (this.selectedTime) {
+    if (isRemoveFromToday) {
+      this.removeFromToday();
+    } else if (this.selectedTime) {
       const task = this.data.task;
       const newDate = new Date(
         getDateTimeFromClockString(this.selectedTime, this.selectedDate as Date),
@@ -300,21 +298,27 @@ export class DialogScheduleTaskComponent implements AfterViewInit {
         false,
       );
       if (isTodayI) {
-        this.addToMyDay();
-      } else {
-        this.removeFromMyDay();
+        this.addToToday();
       }
     } else if (newDay === getWorklogStr()) {
-      if (this.isTaskPlannedForToday()) {
-        this.addToMyDay();
+      if (this.isShowAddToToday()) {
+        this.addToToday();
 
         this._snackService.open({
           type: 'SUCCESS',
           msg: T.F.PLANNER.S.TASK_PLANNED_FOR,
-          translateParams: { date: formattedDate },
+          translateParams: {
+            date: formattedDate,
+            extra: await this._plannerService.getSnackExtraStr(newDay),
+          },
         });
       } else {
-        this.removeFromMyDay();
+        this._snackService.open({
+          type: 'CUSTOM',
+          ico: 'info',
+          msg: T.F.PLANNER.S.TASK_ALREADY_PLANNED,
+          translateParams: { date: formattedDate },
+        });
       }
     } else {
       this._store.dispatch(
@@ -323,9 +327,13 @@ export class DialogScheduleTaskComponent implements AfterViewInit {
       this._snackService.open({
         type: 'SUCCESS',
         msg: T.F.PLANNER.S.TASK_PLANNED_FOR,
-        translateParams: { date: formattedDate },
+        translateParams: {
+          date: formattedDate,
+          extra: await this._plannerService.getSnackExtraStr(newDay),
+        },
       });
     }
+
     this.close(true);
   }
 
@@ -335,14 +343,16 @@ export class DialogScheduleTaskComponent implements AfterViewInit {
 
     switch (item) {
       case 0:
-        this.selectedDate = tDate;
         break;
       case 1:
+        this.selectedDate = tDate;
+        break;
+      case 2:
         const tomorrow = tDate;
         tomorrow.setDate(tomorrow.getDate() + 1);
         this.selectedDate = tomorrow;
         break;
-      case 2:
+      case 3:
         const nextFirstDayOfWeek = tDate;
         const dayOffset =
           (this._dateAdapter.getFirstDayOfWeek() -
@@ -352,21 +362,22 @@ export class DialogScheduleTaskComponent implements AfterViewInit {
         nextFirstDayOfWeek.setDate(nextFirstDayOfWeek.getDate() + dayOffset);
         this.selectedDate = nextFirstDayOfWeek;
         break;
-      case 3:
+      case 4:
         const nextMonth = tDate;
         nextMonth.setMonth(nextMonth.getMonth() + 1);
         this.selectedDate = nextMonth;
         break;
     }
 
-    this.submit();
+    const isRemoveFromToday = item === 0 && this.isShowRemoveFromToday();
+    this.submit(isRemoveFromToday);
   }
 
-  isTaskNotPlannedForToday(): boolean {
-    return isTaskNotPlannedForToday(this.task);
+  isShowRemoveFromToday(): boolean {
+    return isShowRemoveFromToday(this.task);
   }
 
-  isTaskPlannedForToday(): boolean {
-    return isTaskPlannedForToday(this.task, this.workContextService.isToday);
+  isShowAddToToday(): boolean {
+    return isShowAddToToday(this.task, this.workContextService.isToday);
   }
 }

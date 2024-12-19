@@ -9,9 +9,14 @@
   </ng-container>
 
   <ng-container better-drawer-side>
+    @let panelContent = panelContent$ |async;
     <div class="right-panel">
+      <issue-panel
+        *ngIf="panelContent === 'ADD_TASK_PANEL'"
+        [@slideInFromRight]
+      ></issue-panel>
       <notes
-        *ngIf="!(selectedTaskWithDelayForNone$|async) "
+        *ngIf="panelContent === 'NOTES'"
         [@slideInFromRight]
       ></notes>
       <task-detail-panel

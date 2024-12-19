@@ -16,7 +16,6 @@
     routerLinkActive="isActiveRoute"
   >
     <mat-icon svgIcon="early_on"></mat-icon>
-    <!--    <span class="text">{{ T.MH.PLANNER|translate }}</span>-->
     <span class="text">{{ T.MH.SCHEDULE|translate }}</span>
   </button>
 
@@ -27,7 +26,6 @@
     routerLink="planner"
     routerLinkActive="isActiveRoute"
   >
-    <!--    <mat-icon>calendar_view_week</mat-icon>-->
     <mat-icon>edit_calendar</mat-icon>
     <span class="text">{{ T.MH.PLANNER|translate }}</span>
   </button>
@@ -60,6 +58,7 @@
     <!--    </button>-->
 
     <button
+      [style.display]="projectList.length ? '' : 'none'"
       class="additional-btn"
       #projectExpandBtn2
       mat-icon-button
@@ -137,7 +136,6 @@
   </button>
 
   <div
-    *ngIf="tagList.length"
     [@standardList]="tagList?.length"
     cdkDropList
     (cdkDropListDropped)="dropOnTagList(tagList, $event)"
@@ -258,7 +256,7 @@
         <span class="text">{{ T.MH.HM.SYNC|translate }}</span>
       </button>
       <button
-        (click)="startTour(TourId.Calendars)"
+        (click)="startTour(TourId.IssueProviders)"
         mat-menu-item
       >
         <mat-icon>directions</mat-icon>

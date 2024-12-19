@@ -28,23 +28,33 @@
     <!--  >-->
     <!--    <mat-icon>history</mat-icon>-->
     <!--  </button>-->
+
+    @if(isShowRemoveFromToday()){
     <button
       mat-icon-button
       tabindex="0"
       (click)="quickAccessBtnClick(0)"
-      [matTooltip]="(T.F.TASK.D_SCHEDULE_TASK.QA_TODAY|translate)"
+      [matTooltip]="(T.F.TASK.D_SCHEDULE_TASK.QA_REMOVE_TODAY|translate)"
     >
-      <mat-icon *ngIf="isTaskPlannedForToday()">wb_sunny</mat-icon>
-      <mat-icon
-        *ngIf="isTaskNotPlannedForToday()"
-        svgIcon="remove_today"
-      ></mat-icon>
+      <mat-icon svgIcon="remove_today"></mat-icon>
     </button>
-
+    }
+    <!-- -->
+    @if(isShowAddToToday()){
     <button
       mat-icon-button
       tabindex="0"
       (click)="quickAccessBtnClick(1)"
+      [matTooltip]="(T.F.TASK.D_SCHEDULE_TASK.QA_TODAY|translate)"
+    >
+      <mat-icon>wb_sunny</mat-icon>
+    </button>
+    }
+
+    <button
+      mat-icon-button
+      tabindex="0"
+      (click)="quickAccessBtnClick(2)"
       [matTooltip]="(T.F.TASK.D_SCHEDULE_TASK.QA_TOMORROW|translate)"
     >
       <mat-icon svgIcon="tomorrow"></mat-icon>
@@ -52,7 +62,7 @@
     <button
       mat-icon-button
       tabindex="0"
-      (click)="quickAccessBtnClick(2)"
+      (click)="quickAccessBtnClick(3)"
       [matTooltip]="(T.F.TASK.D_SCHEDULE_TASK.QA_NEXT_WEEK|translate)"
     >
       <mat-icon svgIcon="next_week"></mat-icon>
@@ -197,7 +207,7 @@
 
   <!--TODO maybe handle dynamically -->
   <a
-    *ngIf="task.issueId && task.issueType !=='CALENDAR'"
+    *ngIf="task.issueId && task.issueType !==ICAL_TYPE"
     [href]="issueUrl$|async"
     mat-menu-item
     style="color: inherit"
@@ -209,7 +219,7 @@
 
   <button
     (click)="updateIssueData()"
-    *ngIf="task.issueId && task.issueType !=='CALENDAR'"
+    *ngIf="task.issueId && task.issueType !==ICAL_TYPE"
     mat-menu-item
   >
     <mat-icon [svgIcon]="task.issueType|issueIcon"></mat-icon>
@@ -240,19 +250,19 @@
     <span class="key-i">{{ kb.moveToTodaysTasks }}</span>
   </button>
 
-  <button
-    (click)="editTags();"
-    mat-menu-item
-  >
-    <span class="menuItemLeft">
-      <mat-icon>style</mat-icon>
-      {{ T.F.TASK.CMP.EDIT_TAGS|translate }}
-    </span>
-    <span class="key-i">{{ kb.taskEditTags }}</span>
-  </button>
+  <!--  <button-->
+  <!--    (click)="editTags();"-->
+  <!--    mat-menu-item-->
+  <!--  >-->
+  <!--    <span class="menuItemLeft">-->
+  <!--      <mat-icon>style</mat-icon>-->
+  <!--      {{ T.F.TASK.CMP.EDIT_TAGS|translate }}-->
+  <!--    </span>-->
+  <!--    <span class="key-i">{{ kb.taskEditTags }}</span>-->
+  <!--  </button>-->
 
   <button
-    *ngIf="!task.parentId && (!task.issueId || task.issueType ==='CALENDAR') && !task.repeatCfgId && (moveToProjectList$|async)?.length > 0"
+    *ngIf="!task.parentId && !task.repeatCfgId && (moveToProjectList$|async)?.length > 0"
     [matMenuTriggerFor]="projectMenu"
     mat-menu-item
   >

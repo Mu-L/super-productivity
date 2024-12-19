@@ -3,18 +3,22 @@ import {
   Component,
   HostBinding,
   HostListener,
+  inject,
   Input,
 } from '@angular/core';
 import { ScheduleFromCalendarEvent } from '../../schedule/schedule.model';
-import { CalendarIntegrationService } from '../../calendar-integration/calendar-integration.service';
+import { IssueService } from '../../issue/issue.service';
 
 @Component({
   selector: 'planner-calendar-event',
   templateUrl: './planner-calendar-event.component.html',
   styleUrl: './planner-calendar-event.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: false,
 })
 export class PlannerCalendarEventComponent {
+  private _issueService = inject(IssueService);
+
   @Input({ required: true }) calendarEvent!: ScheduleFromCalendarEvent;
   isBeingSubmitted = false;
 
@@ -32,8 +36,11 @@ export class PlannerCalendarEventComponent {
     }
 
     this.isBeingSubmitted = true;
-    this._calendarIntegrationService.addEventAsTask(this.calendarEvent);
+    this._issueService.addTaskFromIssue({
+      issueDataReduced: this.calendarEvent,
+      issueProviderId: this.calendarEvent.calProviderId,
+      issueProviderKey: 'ICAL',
+      isForceDefaultProject: true,
+    });
   }
-
-  constructor(private _calendarIntegrationService: CalendarIntegrationService) {}
 }

@@ -309,10 +309,11 @@ export class TaskService {
     additional: Partial<Task> = {},
     plannedAt: number,
     remindCfg: TaskReminderOptionId = TaskReminderOptionId.AtStart,
-  ): Promise<void> {
+  ): Promise<string> {
     const id = this.add(title, undefined, additional, undefined);
     const task = await this.getByIdOnce$(id).toPromise();
     this.scheduleTask(task, plannedAt, remindCfg);
+    return id;
   }
 
   remove(task: TaskWithSubTasks): void {
@@ -694,10 +695,18 @@ export class TaskService {
   }
 
   moveToProject(task: TaskWithSubTasks, projectId: string): void {
-    if (!!task.parentId || (!!task.issueId && task.issueType !== 'CALENDAR')) {
+    if (!!task.parentId) {
       throw new Error('Wrong task model');
     }
     this._store.dispatch(moveToOtherProject({ task, targetProjectId: projectId }));
+  }
+
+  moveToCurrentWorkContext(task: TaskWithSubTasks): void {
+    if (this._workContextService.activeWorkContextType === WorkContextType.TAG) {
+      this.updateTags(task, [this._workContextService.activeWorkContextId as string]);
+    } else {
+      this.moveToProject(task, this._workContextService.activeWorkContextId as string);
+    }
   }
 
   toggleStartTask(): void {
@@ -944,14 +953,6 @@ export class TaskService {
     return archiveTasks;
   }
 
-  async getAllTaskByIssueTypeForProject$(
-    projectId: string,
-    issueProviderKey: IssueProviderKey,
-  ): Promise<Task[]> {
-    const allTasks = await this.getAllTasksForProject(projectId);
-    return allTasks.filter((task) => task.issueType === issueProviderKey);
-  }
-
   async getAllIssueIdsForProject(
     projectId: string,
     issueProviderKey: IssueProviderKey,
@@ -962,25 +963,26 @@ export class TaskService {
       .map((task) => task.issueId) as string[] | number[];
   }
 
-  // TODO check with new archive
-  async checkForTaskWithIssueInProject(
+  async checkForTaskWithIssueEverywhere(
     issueId: string | number,
     issueProviderKey: IssueProviderKey,
-    projectId: string,
+    issueProviderId: string,
   ): Promise<{
     task: Task;
     subTasks: Task[] | null;
     isFromArchive: boolean;
   } | null> {
-    if (!projectId) {
-      throw new Error('No project id');
+    if (!issueProviderId) {
+      throw new Error('No issueProviderId');
     }
 
     const findTaskFn = (task: Task | ArchiveTask | undefined): boolean =>
       !!task &&
+      // NOTE: we check all, since it is theoretically possible for the same issueId to appear across issue providers
       task.issueId === issueId &&
       task.issueType === issueProviderKey &&
-      task.projectId === projectId;
+      task.issueProviderId === issueProviderId;
+
     const allTasks = (await this._allTasks$.pipe(first()).toPromise()) as Task[];
     const taskWithSameIssue: Task = allTasks.find(findTaskFn) as Task;
 

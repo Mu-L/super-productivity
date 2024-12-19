@@ -40,6 +40,7 @@ import { clockStringFromDate } from '../../../ui/duration/clock-string-from-date
   templateUrl: './dialog-edit-task-repeat-cfg.component.html',
   styleUrls: ['./dialog-edit-task-repeat-cfg.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: false,
 })
 export class DialogEditTaskRepeatCfgComponent implements OnInit, OnDestroy {
   T: typeof T = T;
@@ -112,6 +113,10 @@ export class DialogEditTaskRepeatCfgComponent implements OnInit, OnDestroy {
         label: this._translateService.instant(T.F.TASK_REPEAT.F.Q_DAILY),
       },
       {
+        value: 'MONDAY_TO_FRIDAY',
+        label: this._translateService.instant(T.F.TASK_REPEAT.F.Q_MONDAY_TO_FRIDAY),
+      },
+      {
         value: 'WEEKLY_CURRENT_WEEKDAY',
         label: this._translateService.instant(
           T.F.TASK_REPEAT.F.Q_WEEKLY_CURRENT_WEEKDAY,
@@ -123,10 +128,6 @@ export class DialogEditTaskRepeatCfgComponent implements OnInit, OnDestroy {
         label: this._translateService.instant(T.F.TASK_REPEAT.F.Q_MONTHLY_CURRENT_DATE, {
           dateDayStr,
         }),
-      },
-      {
-        value: 'MONDAY_TO_FRIDAY',
-        label: this._translateService.instant(T.F.TASK_REPEAT.F.Q_MONDAY_TO_FRIDAY),
       },
       {
         value: 'YEARLY_CURRENT_DATE',

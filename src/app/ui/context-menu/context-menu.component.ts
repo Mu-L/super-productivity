@@ -12,28 +12,19 @@ import {
   MatMenuItem,
   MatMenuTrigger,
 } from '@angular/material/menu';
-import { WorkContextMenuComponent } from '../../core-ui/work-context-menu/work-context-menu.component';
 import { MatIconButton } from '@angular/material/button';
 import { NgTemplateOutlet } from '@angular/common';
 
 @Component({
   selector: 'context-menu',
-  standalone: true,
-  imports: [
-    MatMenu,
-    MatMenuTrigger,
-    MatMenuContent,
-    WorkContextMenuComponent,
-    MatMenuItem,
-    NgTemplateOutlet,
-  ],
+  imports: [MatMenu, MatMenuTrigger, MatMenuContent, NgTemplateOutlet],
   templateUrl: './context-menu.component.html',
   styleUrl: './context-menu.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ContextMenuComponent implements OnInit {
-  leftClickTriggerEl = input<HTMLElement | MatMenuItem | MatIconButton>();
-  rightClickTriggerEl = input.required<HTMLElement | MatMenuItem>();
+  leftClickTriggerEl = input<HTMLElement | MatMenuItem | MatIconButton | undefined>();
+  rightClickTriggerEl = input.required<HTMLElement | MatMenuItem | MatIconButton>();
   contextMenu = input.required<TemplateRef<any>>();
 
   @ViewChild('contextMenuTriggerEl', { static: true, read: MatMenuTrigger })
