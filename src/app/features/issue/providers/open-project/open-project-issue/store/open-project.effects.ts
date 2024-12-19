@@ -1,10 +1,9 @@
 import { Injectable } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { setCurrentTask, updateTask } from '../../../../../tasks/store/task.actions';
-import { concatMap, filter, first, map, take, tap, withLatestFrom } from 'rxjs/operators';
+import { concatMap, filter, map, take, tap, withLatestFrom } from 'rxjs/operators';
 import { select, Store } from '@ngrx/store';
 import { OPEN_PROJECT_TYPE } from '../../../../issue.const';
-import { ProjectService } from '../../../../../project/project.service';
 import { MatDialog } from '@angular/material/dialog';
 import { Task } from '../../../../../tasks/task.model';
 import { OpenProjectCfg, OpenProjectTransitionOption } from '../../open-project.model';
@@ -19,7 +18,9 @@ import { SnackService } from 'src/app/core/snack/snack.service';
 import { OpenProjectWorkPackage } from '../open-project-issue.model';
 import { IssueService } from 'src/app/features/issue/issue.service';
 import { T } from 'src/app/t.const';
-import { DialogOpenprojectTransitionComponent } from '../../open-project-view-components/dialog-openproject-transition/dialog-openproject-transition.component';
+import { DialogOpenProjectTransitionComponent } from '../../open-project-view-components/dialog-openproject-transition/dialog-open-project-transition.component';
+import { IssueProviderService } from '../../../../issue-provider.service';
+import { assertTruthy } from '../../../../../../util/assert-truthy';
 
 @Injectable()
 export class OpenProjectEffects {
@@ -39,8 +40,8 @@ export class OpenProjectEffects {
         concatMap(({ mainTask, subTask }) =>
           mainTask.issueType === OPEN_PROJECT_TYPE &&
           mainTask.issueId &&
-          mainTask.projectId
-            ? this._getCfgOnce$(mainTask.projectId).pipe(
+          mainTask.issueProviderId
+            ? this._getCfgOnce$(mainTask.issueProviderId).pipe(
                 tap((openProjectCfg) => {
                   if (
                     subTask &&
@@ -49,7 +50,8 @@ export class OpenProjectEffects {
                   ) {
                     this._openTrackTimeDialog(
                       subTask,
-                      +(mainTask.issueId as string),
+                      // TODO looks fishy???
+                      +assertTruthy(mainTask.issueId),
                       openProjectCfg,
                     );
                   } else if (
@@ -60,7 +62,8 @@ export class OpenProjectEffects {
                   ) {
                     this._openTrackTimeDialog(
                       mainTask,
-                      +(mainTask.issueId as string),
+                      // TODO looks fishy???
+                      +assertTruthy(mainTask.issueId),
                       openProjectCfg,
                     );
                   }
@@ -84,10 +87,10 @@ export class OpenProjectEffects {
             currentTaskOrParent && currentTaskOrParent.issueType === OPEN_PROJECT_TYPE,
         ),
         concatMap(([, currentTaskOrParent]) => {
-          if (!currentTaskOrParent.projectId) {
-            throw new Error('No projectId for task');
+          if (!currentTaskOrParent.issueProviderId) {
+            throw new Error('No issueProviderId for task');
           }
-          return this._getCfgOnce$(currentTaskOrParent.projectId).pipe(
+          return this._getCfgOnce$(currentTaskOrParent.issueProviderId).pipe(
             map((openProjectCfg) => ({ openProjectCfg, currentTaskOrParent })),
           );
         }),
@@ -113,13 +116,13 @@ export class OpenProjectEffects {
         ofType(updateTask),
         filter(({ task }): boolean => !!task.changes.isDone),
         // NOTE: as this is only a partial object we need to get the full one
-        concatMap(({ task }) => this._taskService.getByIdOnce$(task.id as string)),
+        concatMap(({ task }) => this._taskService.getByIdOnce$(task.id.toString())),
         filter((task: Task) => task && task.issueType === OPEN_PROJECT_TYPE),
         concatMap((task: Task) => {
-          if (!task.projectId) {
-            throw new Error('No projectId for task');
+          if (!task.issueProviderId) {
+            throw new Error('No issueProviderId for task');
           }
-          return this._getCfgOnce$(task.projectId).pipe(
+          return this._getCfgOnce$(task.issueProviderId).pipe(
             map((openProjectCfg) => ({ openProjectCfg, task })),
           );
         }),
@@ -143,8 +146,8 @@ export class OpenProjectEffects {
     private readonly _actions$: Actions,
     private readonly _store$: Store<any>,
     private readonly _snackService: SnackService,
-    private readonly _projectService: ProjectService,
     private readonly _openProjectApiService: OpenProjectApiService,
+    private readonly _issueProviderService: IssueProviderService,
     private readonly _matDialog: MatDialog,
     private readonly _taskService: TaskService,
     private readonly _issueService: IssueService,
@@ -169,8 +172,8 @@ export class OpenProjectEffects {
       });
   }
 
-  private _getCfgOnce$(projectId: string): Observable<OpenProjectCfg> {
-    return this._projectService.getOpenProjectCfgForProject$(projectId).pipe(first());
+  private _getCfgOnce$(issueProviderId: string): Observable<OpenProjectCfg> {
+    return this._issueProviderService.getCfgOnce$(issueProviderId, 'OPEN_PROJECT');
   }
 
   private _handleTransitionForIssue(
@@ -257,7 +260,7 @@ export class OpenProjectEffects {
     task: Task,
   ): Observable<any> {
     return this._matDialog
-      .open(DialogOpenprojectTransitionComponent, {
+      .open(DialogOpenProjectTransitionComponent, {
         restoreFocus: true,
         data: {
           issue,

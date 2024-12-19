@@ -5,18 +5,20 @@ import { SnackService } from '../../../../../../core/snack/snack.service';
 import { JiraIssue } from '../../jira-issue/jira-issue.model';
 import { Task } from '../../../../../tasks/task.model';
 import { T } from '../../../../../../t.const';
-import { ProjectService } from '../../../../../project/project.service';
-import { first } from 'rxjs/operators';
 import moment from 'moment';
 import { expandFadeAnimation } from '../../../../../../ui/animations/expand.ani';
 import {
-  JIRA_ISSUE_TYPE,
   JIRA_WORK_LOG_EXPORT_CHECKBOXES,
   JIRA_WORK_LOG_EXPORT_FORM_OPTIONS,
 } from '../../jira.const';
 import { JiraWorklogExportDefaultTime } from '../../jira.model';
-import { Subscription } from 'rxjs';
+import { Observable, of, Subscription } from 'rxjs';
 import { DateService } from 'src/app/core/date/date.service';
+import { IssueProviderService } from '../../../../issue-provider.service';
+import { Store } from '@ngrx/store';
+import { IssueProviderActions } from '../../../../store/issue-provider.actions';
+import { TaskService } from '../../../../../tasks/task.service';
+import { first, map, switchMap } from 'rxjs/operators';
 
 @Component({
   selector: 'dialog-jira-add-worklog',
@@ -24,6 +26,7 @@ import { DateService } from 'src/app/core/date/date.service';
   styleUrls: ['./dialog-jira-add-worklog.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   animations: [expandFadeAnimation],
+  standalone: false,
 })
 export class DialogJiraAddWorklogComponent implements OnDestroy {
   T: typeof T = T;
@@ -42,13 +45,26 @@ export class DialogJiraAddWorklogComponent implements OnDestroy {
   timeSpentToday: number;
   timeSpentLoggedDelta: number;
 
+  issueProviderId$: Observable<string> = this.data.task.issueProviderId
+    ? of(this.data.task.issueProviderId)
+    : this._taskService.getByIdOnce$(this.data.task.parentId as string).pipe(
+        map((parentTask) => {
+          if (!parentTask.issueProviderId) {
+            throw new Error('No issue provider id found');
+          }
+          return parentTask.issueProviderId;
+        }),
+      );
+
   private _subs = new Subscription();
 
   constructor(
     private _jiraApiService: JiraApiService,
     private _matDialogRef: MatDialogRef<DialogJiraAddWorklogComponent>,
     private _snackService: SnackService,
-    private _projectService: ProjectService,
+    private _taskService: TaskService,
+    private _issueProviderService: IssueProviderService,
+    private _store: Store,
     @Inject(MAT_DIALOG_DATA)
     public data: {
       issue: JiraIssue;
@@ -65,9 +81,13 @@ export class DialogJiraAddWorklogComponent implements OnDestroy {
     this.timeSpentLoggedDelta = Math.max(0, this.data.task.timeSpent - this.timeLogged);
 
     this._subs.add(
-      this._projectService
-        .getJiraCfgForProject$(this.data.task.projectId as string)
-        .pipe(first())
+      this.issueProviderId$
+        .pipe(
+          first(),
+          switchMap((issueProviderId) =>
+            this._issueProviderService.getCfgOnce$(issueProviderId, 'JIRA'),
+          ),
+        )
         .subscribe((cfg) => {
           if (cfg.worklogDialogDefaultTime) {
             this.timeSpent = this.getTimeToLogForMode(cfg.worklogDialogDefaultTime);
@@ -86,19 +106,22 @@ export class DialogJiraAddWorklogComponent implements OnDestroy {
   }
 
   async submitWorklog(): Promise<void> {
-    if (this.issue.id && this.started && this.timeSpent && this.data.task.projectId) {
-      const cfg = await this._projectService
-        .getJiraCfgForProject$(this.data.task.projectId)
-        .pipe(first())
+    const issueProviderId = await this.issueProviderId$.pipe(first()).toPromise();
+    if (this.issue.id && this.started && this.timeSpent && issueProviderId) {
+      const cfg = await this._issueProviderService
+        .getCfgOnce$(issueProviderId, 'JIRA')
         .toPromise();
 
       if (this.defaultTimeCheckboxContent?.isChecked === true) {
-        this._projectService.updateIssueProviderConfig(
-          this.data.task.projectId,
-          JIRA_ISSUE_TYPE,
-          {
-            worklogDialogDefaultTime: this.defaultTimeCheckboxContent.value,
-          },
+        this._store.dispatch(
+          IssueProviderActions.updateIssueProvider({
+            issueProvider: {
+              id: issueProviderId,
+              changes: {
+                worklogDialogDefaultTime: this.defaultTimeCheckboxContent.value,
+              },
+            },
+          }),
         );
       }
 

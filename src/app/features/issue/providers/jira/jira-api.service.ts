@@ -12,6 +12,7 @@ import {
   mapIssuesResponse,
   mapResponse,
   mapToSearchResults,
+  mapToSearchResultsForJQL,
   mapTransitionResponse,
 } from './jira-issue/jira-issue-map.util';
 import {
@@ -33,6 +34,8 @@ import {
   mapTo,
   shareReplay,
   take,
+  tap,
+  timeoutWith,
 } from 'rxjs/operators';
 import { JiraIssue, JiraIssueReduced } from './jira-issue/jira-issue.model';
 import moment from 'moment';
@@ -49,6 +52,7 @@ import { SS } from '../../../../core/persistence/storage-keys.const';
 import { MatDialog } from '@angular/material/dialog';
 import { DialogPromptComponent } from '../../../../ui/dialog-prompt/dialog-prompt.component';
 import { stripTrailing } from '../../../../util/strip-trailing';
+import { IS_ANDROID_WEB_VIEW } from '../../../../util/is-android-web-view';
 
 const BLOCK_ACCESS_KEY = 'SUP_BLOCK_JIRA_ACCESS';
 const API_VERSION = 'latest';
@@ -82,9 +86,14 @@ export class JiraApiService {
   private _requestsLog: { [key: string]: JiraRequestLogItem } = {};
   private _isBlockAccess: boolean = !!sessionStorage.getItem(BLOCK_ACCESS_KEY);
   private _isExtension: boolean = false;
-  private _isInterfacesReadyIfNeeded$: Observable<boolean> = IS_ELECTRON
-    ? of(true).pipe()
-    : this._chromeExtensionInterfaceService.onReady$.pipe(mapTo(true), shareReplay(1));
+  private _isInterfacesReadyIfNeeded$: Observable<boolean> =
+    IS_ELECTRON || IS_ANDROID_WEB_VIEW
+      ? of(true).pipe()
+      : this._chromeExtensionInterfaceService.onReady$.pipe(
+          mapTo(true),
+          shareReplay(1),
+          timeoutWith(500, throwError('Jira: Extension not installed or not ready')),
+        );
 
   constructor(
     private _chromeExtensionInterfaceService: ChromeExtensionInterfaceService,
@@ -116,6 +125,30 @@ export class JiraApiService {
     sessionStorage.removeItem(BLOCK_ACCESS_KEY);
   }
 
+  search$(searchTermJQL: string, cfg: JiraCfg): Observable<SearchResultItem[]> {
+    return this._sendRequest$({
+      jiraReqCfg: {
+        pathname: 'search/jql',
+        followAllRedirects: true,
+        query: {
+          jql: searchTermJQL,
+          // fields: [
+          //   ...JIRA_ADDITIONAL_ISSUE_FIELDS,
+          //   ...(cfg.storyPointFieldId ? [cfg.storyPointFieldId] : []),
+          // ],
+        },
+        transform: mapToSearchResultsForJQL,
+        // NOTE: we pass the cfg as well to avoid race conditions
+      },
+      cfg,
+    }).pipe(
+      // switchMap((res) =>
+      //   res.length > 0 ? of(res) : this.issuePicker$(searchTerm, cfg),
+      // ),
+      tap((v) => console.log('AAAAA', v)),
+    );
+  }
+
   issuePicker$(searchTerm: string, cfg: JiraCfg): Observable<SearchResultItem[]> {
     const searchStr = `${searchTerm}`;
 
@@ -127,14 +160,41 @@ export class JiraApiService {
           showSubTasks: true,
           showSubTaskParent: true,
           query: searchStr,
-          currentJQL: cfg.searchJqlQuery,
+          currentJQL: cfg.searchJqlQuery || '',
         },
         transform: mapToSearchResults,
         // NOTE: we pass the cfg as well to avoid race conditions
       },
       cfg,
-    });
+    })
+      .pipe
+      // switchMap((res) =>
+      //   res.length > 0 ? of(res) : this.fallBackSearch$(searchTerm, cfg),
+      // ),
+      ();
   }
+
+  // fallBackSearch$(searchTerm: string, cfg: JiraCfg): Observable<SearchResultItem[]> {
+  //   const options = {
+  //     maxResults: JIRA_MAX_RESULTS,
+  //     fields: [
+  //       ...JIRA_ADDITIONAL_ISSUE_FIELDS,
+  //       ...(cfg.storyPointFieldId ? [cfg.storyPointFieldId] : []),
+  //     ],
+  //   };
+  //   return this._sendRequest$({
+  //     jiraReqCfg: {
+  //       transform: mapIssuesResponse as (res: any, cfg?: JiraCfg) => any,
+  //       pathname: 'search',
+  //       method: 'POST',
+  //       body: {
+  //         ...options,
+  //         jql: searchTerm,
+  //       },
+  //     },
+  //     cfg,
+  //   });
+  // }
 
   listFields$(cfg: JiraCfg): Observable<any> {
     return this._sendRequest$({
@@ -313,7 +373,7 @@ export class JiraApiService {
       settings.host &&
       settings.userName &&
       settings.password &&
-      (IS_ELECTRON || this._isExtension)
+      (IS_ELECTRON || this._isExtension || IS_ANDROID_WEB_VIEW)
     );
   }
 
@@ -350,7 +410,7 @@ export class JiraApiService {
           this._snackService.open({
             type: 'ERROR',
             msg:
-              !IS_ELECTRON && !this._isExtension
+              !IS_ELECTRON && !this._isExtension && !IS_ANDROID_WEB_VIEW
                 ? T.F.JIRA.S.EXTENSION_NOT_LOADED
                 : T.F.JIRA.S.INSUFFICIENT_SETTINGS,
           });
@@ -407,6 +467,28 @@ export class JiraApiService {
     transform: any,
     jiraCfg: JiraCfg,
   ): Observable<any> {
+    // if (!this._isExtension) {
+    //   return fromPromise(
+    //     fetch(url, requestInit)
+    //       .then((response) => response.body)
+    //       .then(streamToJsonIfPossible as any)
+    //       .then((res) => {
+    //         if ((res as any)?.errorMessages?.length) {
+    //           throw new Error((res as any).errorMessages.join(', '));
+    //         }
+    //         return transform ? transform({ response: res }, jiraCfg) : { response: res };
+    //       }),
+    //   ).pipe(
+    //     catchError((err) => {
+    //       console.log(err);
+    //       console.log(getErrorTxt(err));
+    //       const errTxt = `Jira: ${getErrorTxt(err)}`;
+    //       this._snackService.open({ type: 'ERROR', msg: errTxt });
+    //       return throwError({ [HANDLED_ERROR_PROP_STR]: errTxt });
+    //     }),
+    //   );
+    // }
+
     // TODO refactor to observable for request canceling etc
     let promiseResolve;
     let promiseReject;
@@ -436,6 +518,8 @@ export class JiraApiService {
         'SP_JIRA_REQUEST',
         requestToSend,
       );
+    } else {
+      throw new Error('Jira: No valid interface found');
     }
 
     this._globalProgressBarService.countUp(url);
@@ -618,3 +702,33 @@ export class JiraApiService {
     throw new Error('Jira: btoo not supported');
   }
 }
+
+// // eslint-disable-next-line prefer-arrow/prefer-arrow-functions
+// async function streamToString(stream: ReadableStream): Promise<string> {
+//   const reader = stream.getReader();
+//   const decoder = new TextDecoder();
+//   let result = '';
+//   let done = false;
+//
+//   while (!done) {
+//     const { value, done: doneReading } = await reader.read();
+//     done = doneReading;
+//     if (value) {
+//       result += decoder.decode(value, { stream: true });
+//     }
+//   }
+//
+//   result += decoder.decode(); // flush the decoder
+//   return result;
+// }
+//
+// // eslint-disable-next-line prefer-arrow/prefer-arrow-functions
+// async function streamToJsonIfPossible(stream: ReadableStream): Promise<any> {
+//   const text = await streamToString(stream);
+//   try {
+//     return JSON.parse(text);
+//   } catch (e) {
+//     console.error('Jira: Could not parse response', text);
+//     return text;
+//   }
+// }

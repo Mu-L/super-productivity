@@ -147,7 +147,7 @@
   <task-detail-item
     (collapseParent)="collapseParent()"
     (keyPress)="onItemKeyPress($event)"
-    *ngIf="task.issueId && task.issueType !=='CALENDAR'"
+    *ngIf="task.issueId && task.issueType !==ICAL_TYPE"
     [expanded]="isExpandedIssuePanel && !isDialogMode"
     [type]="'panel'"
   >
@@ -179,9 +179,15 @@
     [type]="'panel'"
   >
     <ng-container panel-header>
+      @if(isMarkdownChecklist){
+      <mat-icon>checklist</mat-icon>
+      Checklist
+      <!-- -->
+      } @else {
       <mat-icon *ngIf="task.notes">chat</mat-icon>
       <mat-icon *ngIf="!task.notes">chat_bubble_outline</mat-icon>
       <span>{{T.F.TASK.ADDITIONAL_INFO.NOTES|translate}}</span>
+      }
     </ng-container>
 
     <ng-container panel-content>
@@ -192,6 +198,7 @@
         (keyboardUnToggle)="focusItem(noteWrapperElRef)"
         [isFocus]="isFocusNotes"
         [isShowControls]="true"
+        [isShowChecklistToggle]="true"
         [model]="task.notes|| defaultTaskNotes"
       ></inline-markdown>
     </ng-container>
@@ -285,6 +292,27 @@
       >
         {{repeatCfgLabel}}
       </div>
+    </ng-container>
+  </task-detail-item>
+
+  <task-detail-item
+    #tagEditDetailItemElRef
+    (collapseParent)="collapseParent()"
+    (keyPress)="onItemKeyPress($event)"
+    (editActionTriggered)="tagEditElRef.focusInput()"
+    type="fullSizeInput"
+    class="input-item --estimate"
+  >
+    <ng-container input-title>
+      <mat-icon>style</mat-icon>
+    </ng-container>
+    <ng-container input-value>
+      <tag-edit
+        #tagEditElRef
+        [task]="task"
+        [tagIds]="task.tagIds"
+        (escapePress)="tagEditDetailItemElRef.focusEl()"
+      ></tag-edit>
     </ng-container>
   </task-detail-item>
 

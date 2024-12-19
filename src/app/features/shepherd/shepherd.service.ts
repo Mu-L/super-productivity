@@ -43,17 +43,14 @@ export class ShepherdService {
     );
     this.start();
     // this.show('XXX' as TourId);
+    // this.show(TourId.Projects as TourId);
   }
 
   async show(id: TourId): Promise<void> {
     if (!this.isActive) {
       await this.init();
     }
-    if (
-      id !== TourId.Calendars &&
-      id !== TourId.ProductivityHelper &&
-      id !== TourId.StartTourAgain
-    ) {
+    if (id !== TourId.ProductivityHelper && id !== TourId.StartTourAgain) {
       await this._router.navigateByUrl('/');
     }
 

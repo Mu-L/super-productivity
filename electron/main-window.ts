@@ -81,13 +81,48 @@ export const createWindow = ({
     webPreferences: {
       scrollBounce: true,
       backgroundThrottling: false,
-      webSecurity: !IS_DEV,
+      webSecurity: false,
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       // make remote module work with those two settings
       contextIsolation: true,
     },
     icon: ICONS_FOLDER + '/icon_256x256.png',
+  });
+
+  // see: https://pratikpc.medium.com/bypassing-cors-with-electron-ab7eaf331605
+  mainWin.webContents.session.webRequest.onBeforeSendHeaders((details, callback) => {
+    const { requestHeaders } = details;
+    removeKeyInAnyCase(requestHeaders, 'Origin');
+    removeKeyInAnyCase(requestHeaders, 'Referer');
+    removeKeyInAnyCase(requestHeaders, 'Cookie');
+    removeKeyInAnyCase(requestHeaders, 'sec-ch-ua');
+    removeKeyInAnyCase(requestHeaders, 'sec-ch-ua-mobile');
+    removeKeyInAnyCase(requestHeaders, 'sec-ch-ua-platform');
+    removeKeyInAnyCase(requestHeaders, 'sec-fetch-dest');
+    removeKeyInAnyCase(requestHeaders, 'sec-fetch-mode');
+    removeKeyInAnyCase(requestHeaders, 'sec-fetch-site');
+    removeKeyInAnyCase(requestHeaders, 'accept-encoding');
+    removeKeyInAnyCase(requestHeaders, 'accept-language');
+    removeKeyInAnyCase(requestHeaders, 'priority');
+    removeKeyInAnyCase(requestHeaders, 'accept');
+
+    // NOTE this is needed for GitHub api requests to work :(
+    if (!details.url.includes('github.com')) {
+      removeKeyInAnyCase(requestHeaders, 'User-Agent');
+    }
+    callback({ requestHeaders });
+  });
+
+  mainWin.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    const { responseHeaders } = details;
+    upsertKeyValue(responseHeaders, 'Access-Control-Allow-Origin', ['*']);
+    upsertKeyValue(responseHeaders, 'Access-Control-Allow-Headers', ['*']);
+    upsertKeyValue(responseHeaders, 'Access-Control-Allow-Methods', ['*']);
+
+    callback({
+      responseHeaders,
+    });
   });
 
   mainWindowState.manage(mainWin);
@@ -156,8 +191,10 @@ function initWinEventListeners(app: any): void {
 
   // open new window links in browser
   mainWin.webContents.on('will-navigate', (ev, url) => {
-    ev.preventDefault();
-    openUrlInBrowser(url);
+    if (!url.includes('localhost')) {
+      ev.preventDefault();
+      openUrlInBrowser(url);
+    }
   });
   mainWin.webContents.setWindowOpenHandler((details) => {
     openUrlInBrowser(details.url);
@@ -271,6 +308,8 @@ const appCloseHandler = (app: App): void => {
 
 const appMinimizeHandler = (app: App): void => {
   if (!(app as any).isQuiting) {
+    // TODO find reason for the typing error
+    // @ts-ignore
     mainWin.on('minimize', (event: Event) => {
       getSettings(mainWin, (appCfg: GlobalConfigState) => {
         if (appCfg.misc.isMinimizeToTray) {
@@ -284,5 +323,29 @@ const appMinimizeHandler = (app: App): void => {
         }
       });
     });
+  }
+};
+
+const upsertKeyValue = <T>(obj: T, keyToChange: string, value: string[]): T => {
+  const keyToChangeLower = keyToChange.toLowerCase();
+  for (const key of Object.keys(obj)) {
+    if (key.toLowerCase() === keyToChangeLower) {
+      // Reassign old key
+      obj[key] = value;
+      // Done
+      return;
+    }
+  }
+  // Insert at end instead
+  obj[keyToChange] = value;
+};
+
+const removeKeyInAnyCase = <T>(obj: T, keyToRemove: string): T => {
+  const keyToRemoveLower = keyToRemove.toLowerCase();
+  for (const key of Object.keys(obj)) {
+    if (key.toLowerCase() === keyToRemoveLower) {
+      delete obj[key];
+      return;
+    }
   }
 };

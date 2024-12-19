@@ -27,10 +27,12 @@ import { WorkContextService } from '../../work-context/work-context.service';
 import { Store } from '@ngrx/store';
 import { moveItemBeforeItem } from '../../../util/move-item-before-item';
 import { DropListService } from '../../../core-ui/drop-list/drop-list.service';
+import { IssueService } from '../../issue/issue.service';
+import { SearchResultItem } from '../../issue/issue.model';
 
 export type TaskListId = 'PARENT' | 'SUB';
 export type ListModelId = DropListModelSource | string;
-const PARENT_ALLOWED_LISTS = ['DONE', 'UNDONE', 'BACKLOG'];
+const PARENT_ALLOWED_LISTS = ['DONE', 'UNDONE', 'BACKLOG', 'ADD_TASK_PANEL'];
 
 export interface DropModelDataForList {
   listModelId: ListModelId;
@@ -44,6 +46,7 @@ export interface DropModelDataForList {
   styleUrls: ['./task-list.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   animations: [taskListAnimation, expandFadeFastAnimation],
+  standalone: false,
 })
 export class TaskListComponent implements OnDestroy, AfterViewInit {
   tasks = input<TaskWithSubTasks[]>([]);
@@ -91,6 +94,7 @@ export class TaskListComponent implements OnDestroy, AfterViewInit {
     private _taskService: TaskService,
     private _workContextService: WorkContextService,
     private _store: Store,
+    private _issueService: IssueService,
     public dropListService: DropListService,
   ) {}
 
@@ -128,7 +132,11 @@ export class TaskListComponent implements OnDestroy, AfterViewInit {
 
   async drop(
     srcFilteredTasks: TaskWithSubTasks[],
-    ev: CdkDragDrop<DropModelDataForList, DropModelDataForList, TaskWithSubTasks>,
+    ev: CdkDragDrop<
+      DropModelDataForList,
+      DropModelDataForList | string,
+      TaskWithSubTasks | SearchResultItem
+    >,
   ): Promise<void> {
     const srcListData = ev.previousContainer.data;
     const targetListData = ev.container.data;
@@ -145,13 +153,25 @@ export class TaskListComponent implements OnDestroy, AfterViewInit {
 
     const targetTask = targetListData.filteredTasks[ev.currentIndex] as TaskCopy;
 
+    if ('issueData' in draggedTask) {
+      return this._addFromIssuePanel(draggedTask, srcListData as string);
+    } else if (typeof srcListData === 'string') {
+      throw new Error('Should not happen 2');
+    }
+
     if (targetTask && targetTask.id === draggedTask.id) {
       return;
     }
 
     const newIds =
       targetTask && targetTask.id !== draggedTask.id
-        ? [...moveItemBeforeItem(targetListData.filteredTasks, draggedTask, targetTask)]
+        ? [
+            ...moveItemBeforeItem(
+              targetListData.filteredTasks,
+              draggedTask,
+              targetTask as TaskWithSubTasks,
+            ),
+          ]
         : [
             ...targetListData.filteredTasks.filter((t) => t.id !== draggedTask.id),
             draggedTask,
@@ -169,6 +189,21 @@ export class TaskListComponent implements OnDestroy, AfterViewInit {
       targetListData.listModelId,
       newIds.map((p) => p.id),
     );
+  }
+
+  async _addFromIssuePanel(
+    item: SearchResultItem,
+    issueProviderId: string,
+  ): Promise<void> {
+    if (!item.issueType || !item.issueData || !issueProviderId) {
+      throw new Error('No issueData');
+    }
+
+    await this._issueService.addTaskFromIssue({
+      issueDataReduced: item.issueData,
+      issueProviderId: issueProviderId,
+      issueProviderKey: item.issueType,
+    });
   }
 
   private _move(

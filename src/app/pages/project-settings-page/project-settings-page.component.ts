@@ -7,7 +7,6 @@ import {
 } from '@angular/core';
 import { T } from '../../t.const';
 import {
-  ConfigFormConfig,
   ConfigFormSection,
   GlobalConfigSectionKey,
 } from '../../features/config/global-config.model';
@@ -20,10 +19,7 @@ import {
 import { Subscription } from 'rxjs';
 import { ProjectService } from '../../features/project/project.service';
 import { BASIC_PROJECT_CONFIG_FORM_CONFIG } from '../../features/project/project-form-cfg.const';
-import {
-  DEFAULT_ISSUE_PROVIDER_CFGS,
-  ISSUE_PROVIDER_FORM_CFGS,
-} from '../../features/issue/issue.const';
+import { DEFAULT_ISSUE_PROVIDER_CFGS } from '../../features/issue/issue.const';
 import {
   WorkContextAdvancedCfg,
   WorkContextThemeCfg,
@@ -38,11 +34,11 @@ import { isObject } from '../../util/is-object';
   templateUrl: './project-settings-page.component.html',
   styleUrls: ['./project-settings-page.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: false,
 })
 export class ProjectSettingsPageComponent implements OnInit, OnDestroy {
   T: typeof T = T;
   projectThemeSettingsFormCfg: ConfigFormSection<WorkContextThemeCfg>;
-  issueIntegrationFormCfg: ConfigFormConfig;
   basicFormCfg: ConfigFormSection<Project>;
 
   currentProject?: Project | null;
@@ -59,7 +55,6 @@ export class ProjectSettingsPageComponent implements OnInit, OnDestroy {
   ) {
     // somehow they are only unproblematic if assigned here
     this.projectThemeSettingsFormCfg = WORK_CONTEXT_THEME_CONFIG_FORM_CONFIG;
-    this.issueIntegrationFormCfg = ISSUE_PROVIDER_FORM_CFGS;
     this.basicFormCfg = BASIC_PROJECT_CONFIG_FORM_CONFIG;
   }
 
@@ -75,9 +70,7 @@ export class ProjectSettingsPageComponent implements OnInit, OnDestroy {
               return (
                 a.title === b.title &&
                 JSON.stringify(a.advancedCfg) === JSON.stringify(b.advancedCfg) &&
-                JSON.stringify(a.theme) === JSON.stringify(b.theme) &&
-                JSON.stringify(a.issueIntegrationCfgs) ===
-                  JSON.stringify(b.issueIntegrationCfgs)
+                JSON.stringify(a.theme) === JSON.stringify(b.theme)
               );
             } else {
               return a === b;
@@ -94,7 +87,6 @@ export class ProjectSettingsPageComponent implements OnInit, OnDestroy {
           this.currentProjectTheme = project.theme;
 
           // in case there are new ones...
-          this.issueIntegrationCfgs = { ...project.issueIntegrationCfgs };
 
           this._cd.detectChanges();
         }),
@@ -141,25 +133,6 @@ export class ProjectSettingsPageComponent implements OnInit, OnDestroy {
         icon: $event.config.icon,
       });
     }
-  }
-
-  saveIssueProviderCfg($event: {
-    sectionKey: GlobalConfigSectionKey | ProjectCfgFormKey;
-    config: IssueIntegrationCfg;
-  }): void {
-    if (!$event.config || !this.currentProject) {
-      throw new Error('Not enough data');
-    }
-    const { sectionKey, config } = $event;
-    const sectionKeyIN = sectionKey as IssueProviderKey;
-    this.projectService.updateIssueProviderConfig(
-      this.currentProject.id,
-      sectionKeyIN,
-      {
-        ...config,
-      },
-      true,
-    );
   }
 
   getIssueIntegrationCfg(key: IssueProviderKey): IssueIntegrationCfg {

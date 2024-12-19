@@ -78,6 +78,7 @@ class CapacitorMainActivity : BridgeActivity() {
                 view: WebView?,
                 request: WebResourceRequest?
             ): WebResourceResponse? {
+                Log.v("TW", "Regular Request Intercepting request: ${request?.url}")
                 val interceptedResponse = webViewRequestHandler.interceptWebRequest(request)
                 return interceptedResponse ?: super.shouldInterceptRequest(view, request)
             }
@@ -86,7 +87,9 @@ class CapacitorMainActivity : BridgeActivity() {
         swController.setServiceWorkerClient(
             object : ServiceWorkerClient() {
                 override fun shouldInterceptRequest(request: WebResourceRequest): WebResourceResponse? {
-                    return bridge.webViewClient.shouldInterceptRequest(bridge.webView, request)
+                    Log.v("TW", "SW Intercepting request: ${request.url}")
+                    val interceptedResponse = webViewRequestHandler.interceptWebRequest(request)
+                    return interceptedResponse ?: bridge.webViewClient.shouldInterceptRequest(bridge.webView, request)
                 }
             })
 

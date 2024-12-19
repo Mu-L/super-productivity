@@ -5,16 +5,15 @@ import {
   ConfigFormSection,
   LimitedFormlyFieldConfig,
 } from '../../../config/global-config.model';
+import { IssueProviderGithub } from '../../issue.model';
+import { ISSUE_PROVIDER_COMMON_FORM_FIELDS } from '../../common-issue-form-stuff.const';
 
 export const DEFAULT_GITHUB_CFG: GithubCfg = {
   isEnabled: false,
   repo: null,
   token: null,
-  isSearchIssuesFromGithub: false,
-  isAutoPoll: false,
-  isAutoAddToBacklog: false,
-  filterUsername: null,
-  filterIssuesAssignedToMe: false,
+  filterUsernameForIssueUpdates: null,
+  backlogQuery: 'sort:updated state:open assignee:@me',
 };
 
 // NOTE: we need a high limit because git has low usage limits :(
@@ -26,12 +25,11 @@ export const GITHUB_INITIAL_POLL_DELAY = 8 * 1000;
 // export const GITHUB_POLL_INTERVAL = 15 * 1000;
 export const GITHUB_API_BASE_URL = 'https://api.github.com/';
 
-export const GITHUB_CONFIG_FORM: LimitedFormlyFieldConfig<GithubCfg>[] = [
+export const GITHUB_CONFIG_FORM: LimitedFormlyFieldConfig<IssueProviderGithub>[] = [
   {
     key: 'repo',
     type: 'input',
-    hideExpression: (model: any) => !model.isEnabled,
-    templateOptions: {
+    props: {
       label: T.F.GITHUB.FORM.REPO,
       required: true,
       type: 'text',
@@ -41,65 +39,62 @@ export const GITHUB_CONFIG_FORM: LimitedFormlyFieldConfig<GithubCfg>[] = [
   {
     key: 'token',
     type: 'input',
-    hideExpression: (model: any) => !model.isEnabled,
-    templateOptions: {
+    props: {
       label: T.F.GITHUB.FORM.TOKEN,
       required: true,
-      description: T.F.GITHUB.FORM.TOKEN_DESCRIPTION,
       type: 'password',
     },
   },
   {
     type: 'link',
-    hideExpression: (model: any) => !model.isEnabled,
-    templateOptions: {
+    props: {
       url: 'https://github.com/johannesjo/super-productivity/blob/master/docs/github-access-token-instructions.md',
       txt: T.F.ISSUE.HOW_TO_GET_A_TOKEN,
     },
   },
   {
-    key: 'isSearchIssuesFromGithub',
-    type: 'checkbox',
-    hideExpression: (model: any) => !model.isEnabled,
-    templateOptions: {
-      label: T.F.GITHUB.FORM.IS_SEARCH_ISSUES_FROM_GITHUB,
-    },
-  },
-  {
-    key: 'isAutoPoll',
-    type: 'checkbox',
-    hideExpression: (model: any) => !model.isEnabled,
-    templateOptions: {
-      label: T.F.GITHUB.FORM.IS_AUTO_POLL,
-    },
-  },
-  {
-    key: 'isAutoAddToBacklog',
-    type: 'checkbox',
-    hideExpression: (model: any) => !model.isEnabled,
-    templateOptions: {
-      label: T.F.GITHUB.FORM.IS_AUTO_IMPORT_ISSUES,
-    },
-  },
-  {
-    key: 'filterUsername',
-    type: 'input',
-    hideExpression: (model: any) => !model.isEnabled,
-    templateOptions: {
-      label: T.F.GITHUB.FORM.FILTER_USER,
-    },
-  },
-  {
-    key: 'filterIssuesAssignedToMe',
-    type: 'checkbox',
-    hideExpression: (model: any) => !model.isEnabled,
-    templateOptions: {
-      label: T.F.GITHUB.FORM.IS_ASSIGNEE_FILTER,
-    },
+    type: 'collapsible',
+    // todo translate
+    props: { label: 'Advanced Config' },
+    fieldGroup: [
+      ...ISSUE_PROVIDER_COMMON_FORM_FIELDS,
+      {
+        key: 'filterUsernameForIssueUpdates',
+        type: 'input',
+        expressions: {
+          // eslint-disable-next-line @typescript-eslint/naming-convention
+          // 'props.disabled': '!model.filterUsername',
+          hide: '!model.isAutoPoll',
+        },
+        props: {
+          label: T.F.GITHUB.FORM.FILTER_USER,
+          // description: T.F.GITHUB.FORM.FILTER_USER_DESCRIPTION,
+          // todo translate
+          description:
+            'To filter out comments and other changes by yourself when polling for issue updates',
+        },
+      },
+      {
+        key: 'backlogQuery',
+        type: 'input',
+        expressions: {
+          // eslint-disable-next-line @typescript-eslint/naming-convention
+          // 'props.disabled': '!model.filterUsername',
+          hide: '!model.isAutoAddToBacklog || !model.defaultProjectId',
+        },
+        props: {
+          // label: T.F.GITHUB.FORM.IS_ASSIGNEE_FILTER,
+          // TODO translate
+          label: 'Search query to use for importing to backlog',
+          defaultValue: DEFAULT_GITHUB_CFG.backlogQuery,
+        },
+        resetOnHide: false,
+      },
+    ],
   },
 ];
 
-export const GITHUB_CONFIG_FORM_SECTION: ConfigFormSection<GithubCfg> = {
+export const GITHUB_CONFIG_FORM_SECTION: ConfigFormSection<IssueProviderGithub> = {
   title: 'GitHub',
   key: 'GITHUB',
   items: GITHUB_CONFIG_FORM,

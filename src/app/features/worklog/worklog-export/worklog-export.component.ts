@@ -35,6 +35,7 @@ import { createRows, formatRows, formatText } from './worklog-export.util';
   templateUrl: './worklog-export.component.html',
   styleUrls: ['./worklog-export.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: false,
 })
 export class WorklogExportComponent implements OnInit, OnDestroy {
   @Input() rangeStart?: Date;
@@ -43,6 +44,7 @@ export class WorklogExportComponent implements OnInit, OnDestroy {
   @Input() isShowClose?: boolean;
   @Input() projectId?: string | null;
 
+  // eslint-disable-next-line @angular-eslint/no-output-native
   @Output() cancel: EventEmitter<void> = new EventEmitter();
 
   T: typeof T = T;

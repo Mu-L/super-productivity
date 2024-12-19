@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, Inject } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { IssueLocalState } from '../../../../issue.model';
+import { IssueLocalState, IssueProviderJira } from '../../../../issue.model';
 import { JiraIssueReduced } from '../../jira-issue/jira-issue.model';
 import { Observable } from 'rxjs';
 import { JiraApiService } from '../../jira-api.service';
@@ -9,22 +9,22 @@ import { SnackService } from '../../../../../../core/snack/snack.service';
 import { concatMap, first, switchMap } from 'rxjs/operators';
 import { T } from '../../../../../../t.const';
 import { Task } from '../../../../../tasks/task.model';
-import { JiraCommonInterfacesService } from '../../jira-common-interfaces.service';
-import { ProjectService } from '../../../../../project/project.service';
-import { JiraCfg } from '../../jira.model';
 import { IssueService } from '../../../../issue.service';
+import { IssueProviderService } from '../../../../issue-provider.service';
 
 @Component({
   selector: 'dialog-jira-transition',
   templateUrl: './dialog-jira-transition.component.html',
   styleUrls: ['./dialog-jira-transition.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: false,
 })
 export class DialogJiraTransitionComponent {
   T: typeof T = T;
 
-  _jiraCfg$: Observable<JiraCfg> = this._projectService.getJiraCfgForProject$(
-    this.data.task.projectId as string,
+  _jiraCfg$: Observable<IssueProviderJira> = this._issueProviderService.getCfgOnce$(
+    this.data.task.issueProviderId!,
+    'JIRA',
   );
 
   availableTransitions$: Observable<JiraOriginalTransition[]> = this._jiraCfg$.pipe(
@@ -39,8 +39,7 @@ export class DialogJiraTransitionComponent {
   constructor(
     private _jiraApiService: JiraApiService,
     private _issueService: IssueService,
-    private _projectService: ProjectService,
-    private _jiraCommonInterfacesService: JiraCommonInterfacesService,
+    private _issueProviderService: IssueProviderService,
     private _matDialogRef: MatDialogRef<DialogJiraTransitionComponent>,
     private _snackService: SnackService,
     @Inject(MAT_DIALOG_DATA)
@@ -50,8 +49,8 @@ export class DialogJiraTransitionComponent {
       task: Task;
     },
   ) {
-    if (!this.data.task.projectId) {
-      throw new Error('No projectId for task');
+    if (!this.data.task.issueProviderId) {
+      throw new Error('No issueProviderId for task');
     }
   }
 

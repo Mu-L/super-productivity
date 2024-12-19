@@ -97,9 +97,6 @@
         "CALDAV_RESOURCE": "The name of the CalDav resource (the calendar)",
         "CALDAV_URL": "CalDav URL (the base URL)",
         "CALDAV_USER": "Your CalDav username",
-        "IS_AUTO_IMPORT_ISSUES": "Automatically add uncompleted CalDav todos to your backlog",
-        "IS_AUTO_POLL": "Automatically poll imported tasks for changes",
-        "IS_SEARCH_ISSUES_FROM_CALDAV": "Show uncompleted CalDav todos as suggestion when adding new tasks",
         "IS_TRANSITION_ISSUES_ENABLED": "Automatically complete CalDav todos on task completion"
       },
       "FORM_SECTION": {
@@ -185,9 +182,6 @@
       },
       "FORM": {
         "FILTER_USER": "Username (e.g. to filter out changes by yourself)",
-        "IS_AUTO_IMPORT_ISSUES": "Automatically add unresolved issues from Gitea to backlog",
-        "IS_AUTO_POLL": "Automatically poll imported git issues for changes",
-        "IS_SEARCH_ISSUES_FROM_GITEA": "Show issues from git as suggestions when adding new tasks",
         "HOST": "Host (e.g.: https://try.gitea.io)",
         "TOKEN": "Access Token",
         "REPO_FULL_NAME": "Username or Organization name/project",
@@ -228,10 +222,7 @@
         "SCOPE": "Scope",
         "SCOPE_ALL": "All",
         "SCOPE_ASSIGNED": "Assigned to me",
-        "SCOPE_CREATED": "Created by me",
-        "IS_AUTO_POLL": "Automatically poll imported redmine issues for changes",
-        "IS_SEARCH_ISSUES_FROM_REDMINE": "Show issues from redmine as suggestions when adding new tasks",
-        "IS_AUTO_IMPORT_ISSUES": "Automatically add open issues from redmine"
+        "SCOPE_CREATED": "Created by me"
       },
       "FORM_SECTION": {
         "TITLE": "Redmine",
@@ -254,13 +245,9 @@
       },
       "FORM": {
         "FILTER_USER": "Username (e.g. to filter out changes by yourself)",
-        "IS_AUTO_IMPORT_ISSUES": "Automatically import unresolved issues from GitHub",
-        "IS_AUTO_POLL": "Automatically poll imported git issues for changes",
-        "IS_SEARCH_ISSUES_FROM_GITHUB": "Show issues from git as suggestions when adding new tasks",
-        "REPO": "\"username/repositoryName\" for the git repository you want to track",
+        "REPO": "username/repositoryName",
         "TOKEN": "Access Token",
-        "TOKEN_DESCRIPTION": "Required for private repository access",
-        "IS_ASSIGNEE_FILTER": "Filter Issues Assigned to Me"
+        "IS_ASSIGNEE_FILTER": "Only import issues assigned to me to backlog"
       },
       "FORM_SECTION": {
         "HELP": "<p>Here you can configure SuperProductivity to list open GitHub issues for a specific repository in the task creation panel in the daily planning view. They will be listed as suggestions and will provide a link to the issue as well as more information about it.</p> <p>In addition you can automatically import all open issues.</p><p>To get by usage limits and to access you can provide a an access token. <a href='https://docs.github.com/en/free-pro-team@latest/developers/apps/scopes-for-oauth-apps'>More info about its scopes can be found here</a>.",
@@ -297,12 +284,10 @@
         "TOTAL_MSG": "You will submit <em>{{totalTimeToSubmit}}</em> work time for today in total to <em>{{nrOfTasksToSubmit}}</em> different issues."
       },
       "FORM": {
-        "FILTER_USER": "Username (e.g. to filter out changes by yourself)",
+        "FILTER_USER": "Filter username",
         "GITLAB_BASE_URL": "Custom GitLab base URL (optional)",
-        "IS_AUTO_IMPORT_ISSUES": "Automatically import issues from GitLab",
-        "IS_AUTO_POLL": "Automatically poll imported git issues for changes",
-        "IS_SEARCH_ISSUES_FROM_GITLAB": "Show issues from git as suggestions when adding new tasks",
-        "PROJECT": "(default) project ID or user name/project",
+        "PROJECT": "user name/project",
+        "PROJECT_HINT": "e.g. johannesjo/super-productivity",
         "SCOPE": "Scope",
         "SCOPE_ALL": "All",
         "SCOPE_ASSIGNED": "Assigned to me",
@@ -346,12 +331,16 @@
       }
     },
     "ISSUE": {
+      "CROSS_ORIGIN_BROWSER_WARNING": "This integration will likely not work in your browser. Please download the Desktop or Android version of Super Productivity!",
       "HOW_TO_GET_A_TOKEN": "How to get a token?",
+      "DEFAULT_PROJECT_LABEL": "Default Super Productivity Project",
+      "DEFAULT_PROJECT_DESCRIPTION": "Project assigned to tasks created from issues.",
       "DEFAULT": {
         "ISSUES_STR": "issues",
         "ISSUE_STR": "issue"
       },
       "S": {
+        "ERR_GENERIC": "{{issueProviderName}} Error: {{errTxt}}",
         "ERR_NETWORK": "{{issueProviderName}}: Request failed because of a client side network error",
         "ERR_NOT_CONFIGURED": "{{issueProviderName}}: Not properly configured",
         "IMPORTED_MULTIPLE_ISSUES": "{{issueProviderName}}: Imported {{nr}} new {{issuesStr}}",
@@ -418,17 +407,10 @@
         "TIME_SPENT_TOOLTIP": "Add different times",
         "TITLE": "Jira: Submit Worklog"
       },
-      "FORM": {
-        "IS_AUTO_IMPORT_ISSUES": "Automatically import unresolved issues from GitHub",
-        "IS_AUTO_POLL": "Automatically poll imported git issues for changes",
-        "IS_SEARCH_ISSUES_FROM_GITHUB": "Show issues from git as suggestions when adding new tasks",
-        "REPO": "\"username/repositoryName\" for the git repository you want to track"
-      },
+      "FORM": {},
       "FORM_ADV": {
         "AUTO_ADD_BACKLOG_JQL_QUERY": "JQL used for importing issues to Super Productivity automatically",
         "IS_ADD_WORKLOG_ON_SUB_TASK_DONE": "Open dialog to submit worklog to Jira when sub task is done",
-        "IS_AUTO_IMPORT_ISSUES": "Automatically import issues from Jira",
-        "IS_AUTO_POLL_TICKETS": "Check imported issues for changes automatically and notify",
         "IS_CHECK_TO_RE_ASSIGN_TICKET_ON_TASK_START": "Check if the currently worked on issue is assigned to current user",
         "IS_WORKLOG_ENABLED": "Open dialog to submit worklog to Jira when task is done",
         "SEARCH_JQL_QUERY": "JQL Query for limiting searching tasks",
@@ -448,7 +430,6 @@
       },
       "FORM_SECTION": {
         "ADV_CFG": "Advanced Config",
-        "CREDENTIALS": "Credentials",
         "HELP_ARR": {
           "H1": "Basic configuration",
           "H2": "Worklog settings",
@@ -606,11 +587,8 @@
         "UPDATE_STATUS": "Update Status"
       },
       "FORM": {
-        "FILTER_USER": "Username (e.g. to filter out changes by yourself)",
+        "FILTER_USER": "Filter username",
         "HOST": "Host (e.g.: https://www.openproject.org/)",
-        "IS_AUTO_IMPORT_ISSUES": "Automatically import unresolved work packages from OpenProject",
-        "IS_AUTO_POLL": "Automatically poll imported OpenProject work packages for changes",
-        "IS_SEARCH_ISSUES_FROM_OPEN_PROJECT": "Show work packages as suggestions when adding new tasks",
         "IS_SHOW_TIME_TRACKING_DIALOG": "Show time tracking dialog to report to OpenProject",
         "IS_SHOW_TIME_TRACKING_DIALOG_DESCRIPTION": "Requires time tracking module to be enabled for OpenProject project",
         "IS_SHOW_TIME_TRACKING_DIALOG_FOR_EACH_SUB_TASK": "Show time tracking dialog when sub tasks are completed",
@@ -664,7 +642,8 @@
       },
       "S": {
         "REMOVED_PLAN_DATE": "Removed plan date for task '{{taskTitle}}'",
-        "TASK_PLANNED_FOR": "Task planned for {{date}}"
+        "TASK_ALREADY_PLANNED": "Task is already planned for {{date}}",
+        "TASK_PLANNED_FOR": "Task planned for <strong>{{date}}</strong>{{extra}}"
       },
       "TASK_DRAWER": "Task Drawer",
       "EDIT_REPEATED_TASK": "Edit repeated task '{{taskName}}'"
@@ -1024,6 +1003,7 @@
         "REMIND_AT": "Remind at",
         "QA_NEXT_MONTH": "Schedule next Month",
         "QA_NEXT_WEEK": "Schedule next Week",
+        "QA_REMOVE_TODAY": "Remove task from today",
         "QA_TODAY": "Schedule Today",
         "QA_TOMORROW": "Schedule Tomorrow",
         "RO_10M": "10 minutes before it starts",
@@ -1081,7 +1061,6 @@
         "FOUND_MOVE_FROM_OTHER_LIST": "Added task <strong>{{title}}</strong> from <strong>{{contextTitle}}</strong> to current list",
         "FOUND_RESTORE_FROM_ARCHIVE": "Restored task <strong>{{title}}</strong> related to issue from archive",
         "LAST_TAG_DELETION_WARNING": "You're trying to remove the last tag of a non project task. This is not allowed!",
-        "MOVE_TO_PROJECT_NOT_ALLOWED_FOR_ISSUE_TASK": "Moving issue tasks to other project is not allowed",
         "REMINDER_ADDED": "Scheduled task \"{{title}}\"",
         "REMINDER_DELETED": "Deleted reminder for task",
         "REMINDER_UPDATED": "Updated reminder for task \"{{title}}\"",
@@ -1299,7 +1278,7 @@
     "EDIT": "Edit",
     "ENABLED": "Enabled",
     "EXAMPLE_VAL": "e.g. 32m",
-    "EXTENSION_INFO": "Please <a target=\"_blank\" href=\"https://chrome.google.com/webstore/detail/super-productivity/ljkbjodfmekklcoibdnhahlaalhihmlb\"> download the chrome extension</a> in order to allow communication with the Jira Api and Idle Time Handling. Note that this doesn't work for mobile.",
+    "EXTENSION_INFO": "Please <a target=\"_blank\" href=\"https://chrome.google.com/webstore/detail/super-productivity/ljkbjodfmekklcoibdnhahlaalhihmlb\"> download the chrome extension</a> in order to allow communication with the Jira Api and Idle Time Handling. Note that this doesn't work for mobile. <strong>Without the extension the features will not work!!</strong>",
     "HIDE": "Hide",
     "LOGIN": "Login",
     "LOGOUT": "Logout",
@@ -1328,17 +1307,13 @@
       "TITLE": "Automatic Backups"
     },
     "CALENDARS": {
-      "BROWSER_WARNING": "<b>This will likely NOT work with the Browser version of Super Productivity.<br /> Please <a href=\"https://super-productivity.com/download/\">download the desktop version</a> to use this feature!</b>",
+      "BROWSER_WARNING": "Due to cross origin restrictions <b>this will likely NOT work with the Browser version of Super Productivity.<br /> Please <a href=\"https://super-productivity.com/download/\">download the desktop version</a> to use this feature!</b>",
       "CAL_PATH": "Url of the iCal source",
       "CAL_PROVIDERS": "Calendar providers (experimental and optional)",
-      "CAL_PROVIDERS_ADD": "Add Calendar iCal source",
-      "CAL_PROVIDERS_INFO": "You can load calendar data as iCal (e.g. <a href=\"https://support.google.com/calendar/answer/37648?hl=en#zippy=%2Csync-your-google-calendar-view-edit%2Cget-your-calendar-view-only\">Google Calendar</a>, <a href=\"https://support.pushpay.com/s/article/How-do-I-get-an-iCal-link-from-Office-365\">Outlook 365</a>). The data will be integrated in the schedule and you will be prompted to create tasks for calendar events, if they are due.",
       "CHECK_UPDATES": "Check for remote updates every X",
       "DEFAULT_PROJECT": "Default Project for added calendar tasks",
       "HELP": "You can integrate calendars to be reminded and add them as tasks within Super Productivity. The integration works by using the iCal format. For this to work your calendars need to be accessible either over the internet or via file system.",
-      "ICON": "Icon for Schedule",
-      "SHOW_BANNER_THRESHOLD": "Show a notification X before the event (blank for disabled)",
-      "TITLE": "Calendars"
+      "SHOW_BANNER_THRESHOLD": "Show a notification X before the event (blank for disabled)"
     },
     "EVALUATION": {
       "IS_HIDE_EVALUATION_SHEET": "Hide evaluation sheet on daily summary",
@@ -1405,6 +1380,7 @@
       "TASK_TOGGLE_DETAIL_PANEL_OPEN": "Show/Hide additional task info",
       "TASK_TOGGLE_DONE": "Toggle Done",
       "TITLE": "Keyboard Shortcuts",
+      "TOGGLE_ISSUE_PANEL": "Show/Hide Issue Panel",
       "TOGGLE_BACKLOG": "Show/Hide Task Backlog",
       "TOGGLE_BOOKMARKS": "Show/Hide Bookmark Bar",
       "TOGGLE_PLAY": "Start/Stop Task",
@@ -1593,6 +1569,7 @@
     "TAGS": "Tags",
     "TASKS": "Tasks",
     "TASK_LIST": "Task List",
+    "TOGGLE_SHOW_ISSUE_PANEL": "Show/Hide Issue Panel",
     "TOGGLE_SHOW_BOOKMARKS": "Show/Hide Bookmarks",
     "TOGGLE_SHOW_NOTES": "Show/Hide Project Notes",
     "TOGGLE_TRACK_TIME": "Start/Stop tracking time",
