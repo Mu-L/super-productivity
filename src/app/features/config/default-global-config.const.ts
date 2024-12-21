@@ -89,6 +89,7 @@ export const DEFAULT_GLOBAL_CONFIG: GlobalConfigState = {
     addNewTask: 'Shift+A',
     addNewNote: 'n',
     openProjectNotes: 'Shift+N',
+    toggleIssuePanel: 'p',
     toggleSideNav: 'Shift+D',
     showHelp: '?',
     showSearchBar: 'Shift+F',
@@ -147,9 +148,6 @@ export const DEFAULT_GLOBAL_CONFIG: GlobalConfigState = {
     isTrackingReminderEnabled: false,
     isTrackingReminderShowOnMobile: false,
     trackingReminderMinTime: 5 * minute,
-  },
-  calendarIntegration: {
-    calendarProviders: [],
   },
   reminder: {
     isCountdownBannerEnabled: true,

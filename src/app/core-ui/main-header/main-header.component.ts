@@ -36,6 +36,7 @@ import { KeyboardConfig } from 'src/app/features/config/keyboard-config.model';
   styleUrls: ['./main-header.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   animations: [fadeAnimation, expandFadeHorizontalAnimation],
+  standalone: false,
 })
 export class MainHeaderComponent implements OnInit, OnDestroy {
   T: typeof T = T;
@@ -68,13 +69,13 @@ export class MainHeaderComponent implements OnInit, OnDestroy {
 
   isRouteWithSidePanel$: Observable<boolean> = this._router.events.pipe(
     filter((event: any) => event instanceof NavigationEnd),
-    map((event) => !!event.url.match(/(tasks|timeline|daily-summary)$/)),
-    startWith(!!this._router.url.match(/(tasks|timeline|daily-summary)$/)),
+    map((event) => !!event.urlAfterRedirects.match(/(tasks|daily-summary)$/)),
+    startWith(!!this._router.url.match(/(tasks|daily-summary)$/)),
   );
   isRouteWithRightPanel$: Observable<boolean> = this._router.events.pipe(
     filter((event: any) => event instanceof NavigationEnd),
-    map((event) => !!event.url.match(/(tasks|timeline)$/)),
-    startWith(!!this._router.url.match(/(tasks|timeline)$/)),
+    map((event) => !!event.urlAfterRedirects.match(/(tasks)$/)),
+    startWith(!!this._router.url.match(/(tasks)$/)),
   );
 
   private _subs: Subscription = new Subscription();

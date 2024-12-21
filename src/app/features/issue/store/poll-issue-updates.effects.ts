@@ -1,58 +1,53 @@
 import { Injectable } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
-import { forkJoin, merge, Observable } from 'rxjs';
-import { filter, first, mapTo, switchMap, tap } from 'rxjs/operators';
-import { ISSUE_PROVIDER_TYPES } from '../issue.const';
+import { forkJoin, Observable } from 'rxjs';
+import { first, map, switchMap, tap } from 'rxjs/operators';
 import { IssueService } from '../issue.service';
 import { TaskWithSubTasks } from '../../tasks/task.model';
 import { WorkContextService } from '../../work-context/work-context.service';
 import { setActiveWorkContext } from '../../work-context/store/work-context.actions';
-import { updateProjectIssueProviderCfg } from '../../project/store/project.actions';
+import { loadAllData } from '../../../root-store/meta/load-all-data.action';
+import { Store } from '@ngrx/store';
+import { IssueProvider } from '../issue.model';
+import { selectEnabledIssueProviders } from './issue-provider.selectors';
 
 @Injectable()
 export class PollIssueUpdatesEffects {
   pollIssueTaskUpdatesActions$: Observable<unknown> = this._actions$.pipe(
-    ofType(setActiveWorkContext, updateProjectIssueProviderCfg.type),
+    ofType(setActiveWorkContext, loadAllData),
   );
-
   pollIssueChangesForCurrentContext$: Observable<any> = createEffect(
     () =>
       this.pollIssueTaskUpdatesActions$.pipe(
-        switchMap(() =>
-          merge(
-            ...ISSUE_PROVIDER_TYPES.map((providerKey) =>
-              this._issueService.getPollTimer$(providerKey).pipe(
-                switchMap(() =>
-                  this._workContextService.allTasksForCurrentContext$.pipe(
-                    first(),
-                    switchMap((tasks) => {
-                      const issueTasksForProvider = tasks.filter(
-                        (task) => task.issueType === providerKey,
-                      );
-                      return forkJoin(
-                        issueTasksForProvider.map((task) => {
-                          if (!task.projectId) {
-                            throw new Error('No project for task');
-                          }
-                          return this._issueService
-                            .isPollIssueChangesEnabledForProjectOnce$(
-                              providerKey,
-                              task.projectId,
-                            )
-                            .pipe(
-                              filter((isEnabled) => isEnabled),
-                              mapTo(task),
-                            );
-                        }),
-                      );
-                    }),
-                    tap((issueTasks: TaskWithSubTasks[]) =>
-                      this._issueService.refreshIssueTasks(issueTasks),
+        switchMap(() => this._store.select(selectEnabledIssueProviders).pipe(first())),
+        // Get the list of enabled issue providers
+        switchMap((enabledProviders: IssueProvider[]) =>
+          forkJoin(
+            // For each enabled provider, start a polling timer
+            enabledProviders
+              // only for providers that have auto-polling enabled
+              .filter((provider) => provider.isAutoPoll)
+              .map((provider) =>
+                this._issueService.getPollTimer$(provider.issueProviderKey).pipe(
+                  // => whenever the provider specific poll timer ticks:
+                  // ---------------------------------------------------
+                  // Get all tasks for the current context
+                  switchMap(() =>
+                    this._workContextService.allTasksForCurrentContext$.pipe(
+                      // get once each cycle and no updates
+                      first(),
+                      map((tasks) =>
+                        // only use tasks that are assigned to the current issue provider
+                        tasks.filter((task) => task.issueProviderId === provider.id),
+                      ),
                     ),
+                  ),
+                  // Refresh issue tasks for the current provider
+                  tap((issueTasks: TaskWithSubTasks[]) =>
+                    this._issueService.refreshIssueTasks(issueTasks, provider),
                   ),
                 ),
               ),
-            ),
           ),
         ),
       ),
@@ -60,6 +55,7 @@ export class PollIssueUpdatesEffects {
   );
 
   constructor(
+    private _store: Store,
     private _actions$: Actions,
     private readonly _issueService: IssueService,
     private readonly _workContextService: WorkContextService,

@@ -55,13 +55,11 @@ import { DialogEditTaskRepeatCfgComponent } from '../../task-repeat-cfg/dialog-e
 import { TaskRepeatCfgService } from '../../task-repeat-cfg/task-repeat-cfg.service';
 import { DialogEditTaskAttachmentComponent } from '../task-attachment/dialog-edit-attachment/dialog-edit-task-attachment.component';
 import { TaskDetailItemComponent } from './task-additional-info-item/task-detail-item.component';
-import { IssueData, IssueProviderKey } from '../../issue/issue.model';
-import { JIRA_TYPE } from '../../issue/issue.const';
-import { ProjectService } from '../../project/project.service';
+import { IssueData, IssueProviderJira, IssueProviderKey } from '../../issue/issue.model';
+import { ICAL_TYPE, JIRA_TYPE } from '../../issue/issue.const';
 import { IS_ELECTRON } from '../../../app.constants';
 import { LayoutService } from '../../../core-ui/layout/layout.service';
 import { devError } from '../../../util/dev-error';
-import { SS } from '../../../core/persistence/storage-keys.const';
 import { IS_MOBILE } from '../../../util/is-mobile';
 import { GlobalConfigService } from '../../config/global-config.service';
 import { shareReplayUntil } from '../../../util/share-replay-until';
@@ -70,6 +68,9 @@ import { getTaskRepeatInfoText } from './get-task-repeat-info-text.util';
 import { IS_TOUCH_PRIMARY } from '../../../util/is-mouse-primary';
 import { PlannerService } from '../../planner/planner.service';
 import { DialogScheduleTaskComponent } from '../../planner/dialog-schedule-task/dialog-schedule-task.component';
+import { Store } from '@ngrx/store';
+import { selectIssueProviderById } from '../../issue/store/issue-provider.selectors';
+import { isMarkdownChecklist } from '../../markdown-checklist/is-markdown-checklist';
 
 interface IssueAndType {
   id: string | number | null;
@@ -87,6 +88,7 @@ interface IssueDataAndType {
   styleUrls: ['./task-detail-panel.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   animations: [expandAnimation, expandFadeInOnlyAnimation, fadeAnimation, swirlAnimation],
+  standalone: false,
 })
 export class TaskDetailPanelComponent implements AfterViewInit, OnDestroy {
   @Input() isOver: boolean = false;
@@ -104,6 +106,7 @@ export class TaskDetailPanelComponent implements AfterViewInit, OnDestroy {
   selectedItemIndex: number = 0;
   isFocusNotes: boolean = false;
   isDragOver: boolean = false;
+  isMarkdownChecklist: boolean = false;
 
   T: typeof T = T;
   issueAttachments: TaskAttachment[] = [];
@@ -153,14 +156,14 @@ export class TaskDetailPanelComponent implements AfterViewInit, OnDestroy {
     this.issueDataTrigger$.pipe(
       switchMap((args) => {
         if (args && args.id && args.type) {
-          if (this._taskData?.issueType === 'CALENDAR') {
+          if (this._taskData?.issueType === 'ICAL') {
             return of(null);
           }
-          if (!this._taskData || !this._taskData.projectId) {
+          if (!this._taskData || !this._taskData.issueProviderId) {
             throw new Error('task data not ready');
           }
           return this._issueService
-            .getById$(args.type, args.id, this._taskData.projectId)
+            .getById$(args.type, args.id, this._taskData.issueProviderId)
             .pipe(
               // NOTE we need this, otherwise the error is going to weird up the observable
               catchError(() => {
@@ -226,7 +229,7 @@ export class TaskDetailPanelComponent implements AfterViewInit, OnDestroy {
     private _reminderService: ReminderService,
     private _taskRepeatCfgService: TaskRepeatCfgService,
     private _matDialog: MatDialog,
-    private _projectService: ProjectService,
+    private _store: Store,
     public readonly plannerService: PlannerService,
     private readonly _attachmentService: TaskAttachmentService,
     private _translateService: TranslateService,
@@ -256,10 +259,15 @@ export class TaskDetailPanelComponent implements AfterViewInit, OnDestroy {
           filter(({ id, type }) => type === JIRA_TYPE),
           // not strictly reactive reactive but should work a 100% as issueIdAndType are triggered after task data
           switchMap(() => {
-            if (!this._taskData || !this._taskData.projectId) {
+            if (!this._taskData || !this._taskData.issueProviderId) {
               throw new Error('task data not ready');
             }
-            return this._projectService.getJiraCfgForProject$(this._taskData.projectId);
+            return this._store.select(
+              selectIssueProviderById<IssueProviderJira>(
+                this._taskData.issueProviderId,
+                'JIRA',
+              ),
+            );
           }),
           takeUntil(this._onDestroy$),
         )
@@ -267,9 +275,6 @@ export class TaskDetailPanelComponent implements AfterViewInit, OnDestroy {
           if (jiraCfg.isEnabled) {
             window.ea.jiraSetupImgHeaders({
               jiraCfg,
-              wonkyCookie: jiraCfg.isWonkyCookieMode
-                ? sessionStorage.getItem(SS.JIRA_WONKY_COOKIE) || undefined
-                : undefined,
             });
           }
         });
@@ -327,6 +332,7 @@ export class TaskDetailPanelComponent implements AfterViewInit, OnDestroy {
     this.isExpandedIssuePanel = !IS_MOBILE && !!this.issueData;
     this.isExpandedNotesPanel =
       !IS_MOBILE && (!!newVal.notes || (!newVal.issueId && !newVal.attachments?.length));
+    this.isMarkdownChecklist = isMarkdownChecklist(newVal.notes || '');
   }
 
   get progress(): number {
@@ -503,4 +509,6 @@ export class TaskDetailPanelComponent implements AfterViewInit, OnDestroy {
       this.focusItem(this.itemEls.first, 0);
     }, 150);
   }
+
+  protected readonly ICAL_TYPE = ICAL_TYPE;
 }

@@ -852,7 +852,7 @@ $min-badge-size: $s * 2.25;
   transform: translate(-50%, -50%);
   top: 50%;
   margin-top: 10px;
-  font-size: 13px;
+  font-size: 12px;
   z-index: 10;
   line-height: 1;
   text-align: center;
@@ -860,6 +860,7 @@ $min-badge-size: $s * 2.25;
   border: 1px solid $light-theme-extra-border-color;
   background: #fff;
   border-radius: $card-border-radius;
+  white-space: nowrap;
 
   // avoid affecting drag handle
   pointer-events: none;
@@ -867,6 +868,10 @@ $min-badge-size: $s * 2.25;
   @include darkTheme() {
     border-color: $dark-theme-extra-border-color;
     background: $dark-theme-bg-lighter;
+  }
+
+  ::ng-deep span {
+    font-size: 10px;
   }
 }
 

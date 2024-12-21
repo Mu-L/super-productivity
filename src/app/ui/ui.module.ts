@@ -49,7 +49,6 @@ import { SimpleDownloadDirective } from './simple-download/simple-download.direc
 import { DialogConfirmComponent } from './dialog-confirm/dialog-confirm.component';
 import { InputDurationFormlyComponent } from './duration/input-duration-formly/input-duration-formly.component';
 import { EnlargeImgDirective } from './enlarge-img/enlarge-img.directive';
-import { DragulaModule } from 'ng2-dragula';
 import { MsToClockStringPipe } from './duration/ms-to-clock-string.pipe';
 import { InputDurationSliderComponent } from './duration/input-duration-slider/input-duration-slider.component';
 import { MsToMinuteClockStringPipe } from './duration/ms-to-minute-clock-string.pipe';
@@ -88,6 +87,8 @@ import { markedOptionsFactory } from './marked-options-factory';
 
 import { FormlyMatDatepickerModule } from '@ngx-formly/material/datepicker';
 import { LocalDateStrPipe } from './pipes/local-date-str.pipe';
+import { FormlyCollapsibleComponent } from './formly-collapsible/formly-collapsible.component';
+import { ShortTime2Pipe } from './pipes/short-time2.pipe';
 
 const DIALOG_COMPONENTS = [
   DialogConfirmComponent,
@@ -103,6 +104,7 @@ const COMPONENT_AND_PIPES = [
   DurationToStringPipe,
   EnlargeImgDirective,
   FormlyTranslatedTemplateComponent,
+  FormlyCollapsibleComponent,
   FullPageSpinnerComponent,
   HelpSectionComponent,
   HumanizeTimestampPipe,
@@ -128,6 +130,7 @@ const COMPONENT_AND_PIPES = [
   ToArrayPipe,
   SortPipe,
   RoundDurationPipe,
+  ShortTime2Pipe,
   ShortPlannedAtPipe,
   LocalDateStrPipe,
 ];
@@ -193,6 +196,7 @@ const OTHER_3RD_PARTY_MODS_WITHOUT_CFG = [TranslateModule];
           name: 'tpl',
           component: FormlyTranslatedTemplateComponent,
         },
+        { name: 'collapsible', component: FormlyCollapsibleComponent, wrappers: [] },
       ],
       extras: {
         immutable: true,
@@ -201,8 +205,6 @@ const OTHER_3RD_PARTY_MODS_WITHOUT_CFG = [TranslateModule];
     FormlyMatToggleModule,
     FormlyMaterialModule,
     FormlyMatDatepickerModule,
-    // fix https://stackoverflow.com/questions/62755093/angular-error-generic-type-modulewithproviderst-requires-1-type-arguments
-    (DragulaModule as any).forRoot(),
 
     // my modules
     ValidationModule,
@@ -213,7 +215,6 @@ const OTHER_3RD_PARTY_MODS_WITHOUT_CFG = [TranslateModule];
     ...COMPONENT_AND_PIPES,
     ...MAT_MODULES,
     ...OTHER_3RD_PARTY_MODS_WITHOUT_CFG,
-    DragulaModule,
     FormlyMaterialModule,
     FormlyModule,
     MarkdownModule,
@@ -222,6 +223,7 @@ const OTHER_3RD_PARTY_MODS_WITHOUT_CFG = [TranslateModule];
   ],
   providers: [
     provideMarkdown(),
+    ShortTime2Pipe,
     { provide: ErrorHandler, useClass: GlobalErrorHandler },
     {
       provide: MAT_FORM_FIELD_DEFAULT_OPTIONS,

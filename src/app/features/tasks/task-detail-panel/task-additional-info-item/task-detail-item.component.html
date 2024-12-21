@@ -1,9 +1,15 @@
-<ng-container *ngIf="type==='input'">
+<ng-container *ngIf="type==='input' || type==='fullSizeInput'">
   <section
-    (click)="onInputItemClick()"
+    (click)="type==='input' && onInputItemClick()"
     class="input-item"
-    mat-ripple
+    [class.standard-size]="type==='input'"
+    [class.full-size]="type==='fullSizeInput'"
   >
+    <div
+      class="ripple"
+      mat-ripple
+      *ngIf="type==='input'"
+    ></div>
     <div class="input-item__title">
       <ng-content select="[input-title]"></ng-content>
     </div>
@@ -12,6 +18,7 @@
     </div>
 
     <button
+      *ngIf="inputIcon"
       class="input-item__edit-btn"
       color="accent"
       mat-icon-button

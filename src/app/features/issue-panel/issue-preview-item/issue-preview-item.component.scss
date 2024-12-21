@@ -1,0 +1,39 @@
+@import '../../../../variables';
+@import '../../tasks/task/task.component.mixins';
+
+:host {
+  //@include grabCursor();
+  display: flex;
+  align-items: center;
+  padding: 0;
+  border-radius: 6px;
+  border: 1px solid;
+
+  @include lightTheme() {
+    background: $task-c-bg-light;
+    border-color: $light-theme-extra-border-color;
+  }
+
+  @include darkTheme() {
+    color: $task-text-c-dark;
+    //background: $task-c-bg-dark;
+    border-color: $dark-theme-extra-border-color;
+  }
+
+  &.isDone {
+    opacity: 0.7;
+
+    .title {
+      text-decoration: line-through;
+    }
+  }
+}
+
+.title {
+  flex-grow: 1;
+  padding: 4px 0;
+}
+
+.open-issue {
+  opacity: 0.6;
+}
