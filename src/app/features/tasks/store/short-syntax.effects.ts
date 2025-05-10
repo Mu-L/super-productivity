@@ -4,7 +4,7 @@ import {
   addNewTagsFromShortSyntax,
   addTask,
   moveToOtherProject,
-  scheduleTask,
+  scheduleTaskWithTime,
   updateTask,
   updateTaskTags,
 } from './task.actions';
@@ -35,6 +35,8 @@ import { DialogConfirmComponent } from '../../../ui/dialog-confirm/dialog-confir
 import { LayoutService } from '../../../core-ui/layout/layout.service';
 import { DEFAULT_GLOBAL_CONFIG } from '../../config/default-global-config.const';
 import { getWorklogStr } from '../../../util/get-work-log-str';
+import { WorkContextService } from '../../work-context/work-context.service';
+import { INBOX_TAG } from '../../tag/tag.const';
 
 @Injectable()
 export class ShortSyntaxEffects {
@@ -46,6 +48,7 @@ export class ShortSyntaxEffects {
   private _snackService = inject(SnackService);
   private _matDialog = inject(MatDialog);
   private _layoutService = inject(LayoutService);
+  private _workContextService = inject(WorkContextService);
 
   shortSyntax$: any = createEffect(() =>
     this._actions$.pipe(
@@ -71,10 +74,11 @@ export class ShortSyntaxEffects {
         );
       }),
       withLatestFrom(
-        this._tagService.tags$,
+        this._tagService.tagsNoMyDayAndNoList$,
         this._projectService.list$,
         this._globalConfigService.misc$.pipe(
           map((misc) => misc.defaultProjectId),
+          filter(() => this._workContextService.activeWorkContextId !== INBOX_TAG.id),
           concatMap((defaultProjectId) =>
             defaultProjectId
               ? this._projectService.getByIdOnce$(defaultProjectId).pipe(
@@ -106,7 +110,8 @@ export class ShortSyntaxEffects {
           !task.projectId &&
           !task.parentId &&
           task.projectId !== defaultProjectId &&
-          originalAction.type === addTask.type;
+          originalAction.type === addTask.type &&
+          this._workContextService.activeWorkContextId !== INBOX_TAG.id;
 
         if (!r) {
           if (isAddDefaultProjectIfNecessary) {
@@ -133,10 +138,10 @@ export class ShortSyntaxEffects {
             isIgnoreShortSyntax: true,
           }),
         );
-        if (taskChanges.plannedAt && !taskChanges.reminderId) {
-          const { plannedAt } = taskChanges;
+        if (taskChanges.dueWithTime && !taskChanges.reminderId) {
+          const { dueWithTime } = taskChanges;
           if (taskChanges.hasPlannedTime === false) {
-            const plannedDay = new Date(plannedAt);
+            const plannedDay = new Date(dueWithTime);
             const plannedDayInIsoFormat = getWorklogStr(plannedDay);
             const plan = PlannerActions.planTaskForDay({
               task,
@@ -144,11 +149,11 @@ export class ShortSyntaxEffects {
             });
             actions.push(plan);
           } else {
-            const schedule = scheduleTask({
+            const schedule = scheduleTaskWithTime({
               task,
-              plannedAt,
+              dueWithTime: dueWithTime,
               remindAt: remindOptionToMilliseconds(
-                plannedAt,
+                dueWithTime,
                 TaskReminderOptionId.AtStart,
               ),
               isMoveToBacklog: false,

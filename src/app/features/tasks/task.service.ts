@@ -31,15 +31,14 @@ import {
   moveToOtherProject,
   removeTagsForAllTasks,
   removeTimeSpent,
-  reScheduleTask,
+  reScheduleTaskWithTime,
   restoreTask,
   roundTimeSpentForDay,
-  scheduleTask,
+  scheduleTaskWithTime,
   setCurrentTask,
   setSelectedTask,
   toggleStart,
   toggleTaskHideSubTasks,
-  unScheduleTask,
   unsetCurrentTask,
   updateTask,
   updateTaskTags,
@@ -68,8 +67,6 @@ import {
   selectTaskWithSubTasksByRepeatConfigId,
 } from './store/task.selectors';
 import { RoundTimeOption } from '../project/project.model';
-import { TagService } from '../tag/tag.service';
-import { TODAY_TAG } from '../tag/tag.const';
 import { WorkContextService } from '../work-context/work-context.service';
 import { WorkContextType } from '../work-context/work-context.model';
 import {
@@ -97,13 +94,15 @@ import { DateService } from 'src/app/core/date/date.service';
 import { TimeTrackingActions } from '../time-tracking/store/time-tracking.actions';
 import { ArchiveService } from '../time-tracking/archive.service';
 import { TaskArchiveService } from '../time-tracking/task-archive.service';
+import { INBOX_TAG, TODAY_TAG } from '../tag/tag.const';
+import { planTasksForToday } from '../tag/store/tag.actions';
+import { getWorklogStr } from '../../util/get-work-log-str';
 
 @Injectable({
   providedIn: 'root',
 })
 export class TaskService {
   private readonly _store = inject<Store<any>>(Store);
-  private readonly _tagService = inject(TagService);
   private readonly _workContextService = inject(WorkContextService);
   private readonly _imexMetaService = inject(ImexViewService);
   private readonly _timeTrackingService = inject(GlobalTrackingIntervalService);
@@ -309,12 +308,12 @@ export class TaskService {
   async addAndSchedule(
     title: string | null,
     additional: Partial<Task> = {},
-    plannedAt: number,
+    due: number,
     remindCfg: TaskReminderOptionId = TaskReminderOptionId.AtStart,
   ): Promise<string> {
     const id = this.add(title, undefined, additional, undefined);
     const task = await this.getByIdOnce$(id).toPromise();
-    this.scheduleTask(task, plannedAt, remindCfg);
+    this.scheduleTask(task, due, remindCfg);
     return id;
   }
 
@@ -334,10 +333,6 @@ export class TaskService {
     );
   }
 
-  addTodayTag(t: Task): void {
-    this.updateTags(t, [TODAY_TAG.id, ...t.tagIds]);
-  }
-
   updateTags(task: Task, newTagIds: string[]): void {
     this._store.dispatch(
       updateTaskTags({
@@ -353,25 +348,6 @@ export class TaskService {
         tagIdsToRemove: tagsToRemove,
       }),
     );
-  }
-
-  // TODO: Move logic away from service class (to actions)?
-  // TODO: Should this reside in tagService?
-  purgeUnusedTags(tagIds: string[]): void {
-    tagIds.forEach((tagId) => {
-      this.getTasksByTag(tagId)
-        .pipe(take(1))
-        .subscribe((tasks) => {
-          console.log(
-            `Tag is present on ${tasks.length} tasks => ${
-              tasks.length ? 'keeping...' : 'deleting...'
-            }`,
-          );
-          if (tasks.length === 0 && tagId !== TODAY_TAG.id) {
-            this._tagService.removeTag(tagId);
-          }
-        });
-    });
   }
 
   updateUi(id: string, changes: Partial<Task>): void {
@@ -621,7 +597,10 @@ export class TaskService {
   addSubTaskTo(parentId: string): void {
     this._store.dispatch(
       addSubTask({
-        task: this.createNewTaskWithDefaults({ title: '' }),
+        task: this.createNewTaskWithDefaults({
+          title: '',
+          additional: { dueDay: undefined },
+        }),
         parentId,
       }),
     );
@@ -706,10 +685,17 @@ export class TaskService {
     this._store.dispatch(moveToOtherProject({ task, targetProjectId: projectId }));
   }
 
-  moveToCurrentWorkContext(task: TaskWithSubTasks): void {
+  moveToCurrentWorkContext(task: TaskWithSubTasks | Task): void {
     if (this._workContextService.activeWorkContextType === WorkContextType.TAG) {
-      this.updateTags(task, [this._workContextService.activeWorkContextId as string]);
+      if (this._workContextService.activeWorkContextId === TODAY_TAG.id) {
+        this._store.dispatch(planTasksForToday({ taskIds: [task.id] }));
+      } else {
+        this.updateTags(task, [this._workContextService.activeWorkContextId as string]);
+      }
     } else {
+      if (!('subTasks' in task)) {
+        throw new Error('Wrong task model');
+      }
       this.moveToProject(task, this._workContextService.activeWorkContextId as string);
     }
   }
@@ -767,15 +753,15 @@ export class TaskService {
   // --------
   scheduleTask(
     task: Task | TaskWithSubTasks,
-    plannedAt: number,
+    due: number,
     remindCfg: TaskReminderOptionId,
     isMoveToBacklog: boolean = false,
   ): void {
     this._store.dispatch(
-      scheduleTask({
+      scheduleTaskWithTime({
         task,
-        plannedAt,
-        remindAt: remindOptionToMilliseconds(plannedAt, remindCfg),
+        dueWithTime: due,
+        remindAt: remindOptionToMilliseconds(due, remindCfg),
         isMoveToBacklog,
       }),
     );
@@ -783,33 +769,25 @@ export class TaskService {
 
   reScheduleTask({
     task,
-    plannedAt,
+    due,
     remindCfg,
     isMoveToBacklog = false,
   }: {
     task: Task;
-    plannedAt: number;
+    due: number;
     remindCfg: TaskReminderOptionId;
     isMoveToBacklog: boolean;
   }): void {
     this._store.dispatch(
-      reScheduleTask({
+      reScheduleTaskWithTime({
         task,
-        plannedAt,
-        remindAt: remindOptionToMilliseconds(plannedAt, remindCfg),
+        dueWithTime: due,
+        remindAt: remindOptionToMilliseconds(due, remindCfg),
         isMoveToBacklog,
       }),
     );
   }
 
-  unScheduleTask(taskId: string, reminderId?: string, isSkipToast?: boolean): void {
-    if (!taskId) {
-      throw new Error('No task id');
-    }
-    this._store.dispatch(unScheduleTask({ id: taskId, reminderId, isSkipToast }));
-  }
-
-  // HELPER
   // ------
   getByIdOnce$(id: string): Observable<Task> {
     return this._store.pipe(select(selectTaskById, { id }), take(1));
@@ -879,7 +857,13 @@ export class TaskService {
 
   async convertToMainTask(task: Task): Promise<void> {
     const parent = await this.getByIdOnce$(task.parentId as string).toPromise();
-    this._store.dispatch(convertToMainTask({ task, parentTagIds: parent.tagIds }));
+    this._store.dispatch(
+      convertToMainTask({
+        task,
+        parentTagIds: parent.tagIds,
+        isPlanForToday: this._workContextService.activeWorkContextId === TODAY_TAG.id,
+      }),
+    );
   }
 
   // GLOBAL TASK MODEL STUFF
@@ -1046,9 +1030,15 @@ export class TaskService {
         : {}),
 
       tagIds:
-        workContextType === WorkContextType.TAG && !additional.parentId
+        workContextType === WorkContextType.TAG &&
+        !additional.parentId &&
+        workContextId !== TODAY_TAG.id
           ? [workContextId]
           : [],
+
+      ...(workContextId === TODAY_TAG.id && !additional.parentId
+        ? { dueDay: getWorklogStr(), tagIds: [INBOX_TAG.id] }
+        : {}),
 
       ...additional,
     };

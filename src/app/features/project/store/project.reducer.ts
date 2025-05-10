@@ -1,7 +1,6 @@
 import { createEntityAdapter, EntityAdapter, Update } from '@ngrx/entity';
 import { Project, ProjectState } from '../project.model';
 import { createReducer, on } from '@ngrx/store';
-import { FIRST_PROJECT } from '../project.const';
 import {
   WorkContextAdvancedCfg,
   WorkContextType,
@@ -78,10 +77,8 @@ export const projectAdapter: EntityAdapter<Project> = createEntityAdapter<Projec
 // DEFAULT
 // -------
 export const initialProjectState: ProjectState = projectAdapter.getInitialState({
-  ids: [FIRST_PROJECT.id],
-  entities: {
-    [FIRST_PROJECT.id]: FIRST_PROJECT,
-  },
+  ids: [],
+  entities: {},
   [MODEL_VERSION_KEY]: MODEL_VERSION.PROJECT,
 });
 
@@ -158,7 +155,7 @@ export const projectReducer = createReducer<ProjectState>(
       {
         id,
         changes: {
-          isHiddenFromMenu: !state.entities[id]?.isHiddenFromMenu,
+          isHiddenFromMenu: !(state.entities[id] as Project).isHiddenFromMenu,
         },
       },
       state,
@@ -460,7 +457,8 @@ export const projectReducer = createReducer<ProjectState>(
   on(moveProjectTaskToRegularListAuto, (state, { taskId, projectId, isMoveToTop }) => {
     const todaysTaskIdsBefore = (state.entities[projectId] as Project).taskIds;
     const backlogIdsBefore = (state.entities[projectId] as Project).backlogTaskIds;
-    return todaysTaskIdsBefore.includes(taskId)
+    // we check if task was in backlog before to avoid moving up sub tasks
+    return todaysTaskIdsBefore.includes(taskId) || !backlogIdsBefore.includes(taskId)
       ? state
       : projectAdapter.updateOne(
           {

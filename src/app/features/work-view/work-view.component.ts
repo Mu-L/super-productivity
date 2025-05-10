@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  computed,
   effect,
   ElementRef,
   inject,
@@ -50,7 +51,15 @@ import { BacklogComponent } from './backlog/backlog.component';
 import { AsyncPipe } from '@angular/common';
 import { MsToStringPipe } from '../../ui/duration/ms-to-string.pipe';
 import { TranslatePipe } from '@ngx-translate/core';
-import { flattenTasks } from '../tasks/store/task.selectors';
+import {
+  flattenTasks,
+  selectOverdueTasksWithSubTasks,
+} from '../tasks/store/task.selectors';
+import { CollapsibleComponent } from '../../ui/collapsible/collapsible.component';
+import { SnackService } from '../../core/snack/snack.service';
+import { Store } from '@ngrx/store';
+import { planTasksForToday } from '../tag/store/tag.actions';
+import { TODAY_TAG } from '../tag/tag.const';
 
 @Component({
   selector: 'work-view',
@@ -82,6 +91,7 @@ import { flattenTasks } from '../tasks/store/task.selectors';
     AsyncPipe,
     MsToStringPipe,
     TranslatePipe,
+    CollapsibleComponent,
   ],
 })
 export class WorkViewComponent implements OnInit, OnDestroy, AfterContentInit {
@@ -94,8 +104,13 @@ export class WorkViewComponent implements OnInit, OnDestroy, AfterContentInit {
   private _activatedRoute = inject(ActivatedRoute);
   private _projectService = inject(ProjectService);
   private _cd = inject(ChangeDetectorRef);
+  private _store = inject(Store);
+  private _snackService = inject(SnackService);
 
   // TODO refactor all to signals
+  overdueTasks = toSignal(this._store.select(selectOverdueTasksWithSubTasks), {
+    initialValue: [],
+  });
   undoneTasks = input<TaskWithSubTasks[]>([]);
   doneTasks = input<TaskWithSubTasks[]>([]);
   backlogTasks = input<TaskWithSubTasks[]>([]);
@@ -106,6 +121,11 @@ export class WorkViewComponent implements OnInit, OnDestroy, AfterContentInit {
   estimateRemainingToday = toSignal(this.workContextService.estimateRemainingToday$);
   workingToday = toSignal(this.workContextService.workingToday$);
   selectedTaskId = toSignal(this.taskService.selectedTaskId$);
+  isOnTodayList = toSignal(this.workContextService.isToday$);
+
+  isShowOverduePanel = computed(
+    () => this.isOnTodayList() && this.overdueTasks().length > 0,
+  );
 
   isShowTimeWorkedWithoutBreak: boolean = true;
   splitInputPos: number = 100;
@@ -150,6 +170,13 @@ export class WorkViewComponent implements OnInit, OnDestroy, AfterContentInit {
 
       const doneArr = flattenTasks(this.doneTasks());
       if (doneArr.some((t) => t.id === currentSelectedId)) return;
+
+      if (
+        this.workContextService.activeWorkContextId === TODAY_TAG.id &&
+        this.overdueTasks().length > 0 &&
+        flattenTasks(this.overdueTasks()).some((t) => t.id === currentSelectedId)
+      )
+        return;
 
       // if task really is gone
       this.taskService.setSelectedId(null);
@@ -203,5 +230,27 @@ export class WorkViewComponent implements OnInit, OnDestroy, AfterContentInit {
 
   resetBreakTimer(): void {
     this.takeABreakService.resetTimer();
+  }
+
+  moveDoneToArchive(): void {
+    const doneTasks = this.doneTasks();
+    this.taskService.moveToArchive(doneTasks);
+    this._snackService.open({
+      msg: T.F.TASK.S.MOVED_TO_ARCHIVE,
+      type: 'SUCCESS',
+      ico: 'done_all',
+      translateParams: {
+        nr: doneTasks.length,
+      },
+    });
+  }
+
+  addAllOverdueToMyDay(): void {
+    const overdueTasks = this.overdueTasks();
+    this._store.dispatch(
+      planTasksForToday({
+        taskIds: overdueTasks.map((t) => t.id),
+      }),
+    );
   }
 }

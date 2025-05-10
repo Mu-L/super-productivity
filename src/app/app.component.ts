@@ -62,6 +62,9 @@ import { LocalBackupService } from './imex/local-backup/local-backup.service';
 import { DEFAULT_META_MODEL } from './pfapi/api/model-ctrl/meta-model-ctrl';
 import { AppDataCompleteNew } from './pfapi/pfapi-config';
 import { TranslateService } from '@ngx-translate/core';
+import { MatDialog } from '@angular/material/dialog';
+import { DialogPleaseRateComponent } from './features/dialog-please-rate/dialog-please-rate.component';
+import { getWorklogStr } from './util/get-work-log-str';
 
 const w = window as any;
 const productivityTip: string[] = w.productivityTips && w.productivityTips[w.randomIndex];
@@ -111,6 +114,7 @@ export class AppComponent implements OnDestroy {
   private _persistenceLegacyService = inject(PersistenceLegacyService);
   private _persistenceLocalService = inject(PersistenceLocalService);
   private _localBackupService = inject(LocalBackupService);
+  private _matDialog = inject(MatDialog);
 
   readonly syncTriggerService = inject(SyncTriggerService);
   readonly imexMetaService = inject(ImexViewService);
@@ -192,6 +196,18 @@ export class AppComponent implements OnDestroy {
             ':</strong> ' +
             (window as any).productivityTips[(window as any).randomIndex][1],
         });
+      }
+
+      const appStarts = +(localStorage.getItem(LS.APP_START_COUNT) || 0);
+      const lastStartDay = localStorage.getItem(LS.APP_START_COUNT_LAST_START_DAY);
+      const todayStr = getWorklogStr();
+      if (appStarts === 32 || appStarts === 96) {
+        this._matDialog.open(DialogPleaseRateComponent);
+        localStorage.setItem(LS.APP_START_COUNT, (appStarts + 1).toString());
+      }
+      if (lastStartDay !== todayStr) {
+        localStorage.setItem(LS.APP_START_COUNT, (appStarts + 1).toString());
+        localStorage.setItem(LS.APP_START_COUNT_LAST_START_DAY, todayStr);
       }
     }, 1000);
 

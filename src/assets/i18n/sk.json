@@ -999,7 +999,7 @@
         "REMINDER": "Pripomienka",
         "REPEAT": "Opakovať",
         "SCHEDULE_TASK": "Naplánovať úlohu",
-        "SCHEDULED_AT": "Naplánované na",
+        "DUE": "Naplánované na",
         "SUB_TASKS": "Podúlohy ({{nr}})",
         "TIME": "Čas",
         "TITLE_PLACEHOLDER": "Zadajte názov"
@@ -1611,7 +1611,7 @@
     "PROJECT_SETTINGS": "Nastavenia projektu",
     "PROJECTS": "Projekty",
     "QUICK_HISTORY": "Rýchla história",
-    "REPEAT_SCHEDULED": "Opakovanie/plánované",
+    "ALL_PLANNED_LIST": "Opakovanie/plánované",
     "SCHEDULE": "Plán",
     "SETTINGS": "Nastavenia",
     "SHOW_SEARCH_BAR": "Zobrazenie panela vyhľadávania",
@@ -1680,7 +1680,7 @@
     "NO_SCHEDULED_TITLE": "Naplánované úlohy na deň",
     "REPEATED_TASKS": "Repeated tasks",
     "SCHEDULED_TASKS": "Scheduled tasks",
-    "SCHEDULED_TASKS_WITH_REMINDER": "Naplánované úlohy s pripomienkou",
+    "SCHEDULED_TASKS_WITH_TIME": "Naplánované úlohy s pripomienkou",
     "START_TASK": "Start task and remove reminder"
   },
   "THEMES": {

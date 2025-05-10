@@ -999,7 +999,7 @@
         "REMINDER": "تذكير",
         "REPEAT": "كرر",
         "SCHEDULE_TASK": "جدولة مهمة",
-        "SCHEDULED_AT": "من المقرر في",
+        "DUE": "من المقرر في",
         "SUB_TASKS": "المهام الفرعية ({{nr}})",
         "TIME": "زمن",
         "TITLE_PLACEHOLDER": "أدخل عنوانا"
@@ -1611,7 +1611,7 @@
     "PROJECT_SETTINGS": "إعدادات المشروع",
     "PROJECTS": "مشاريع",
     "QUICK_HISTORY": "التاريخ السريع",
-    "REPEAT_SCHEDULED": "تكرار/مجدول",
+    "ALL_PLANNED_LIST": "تكرار/مجدول",
     "SCHEDULE": "جدول",
     "SETTINGS": "الإعدادات",
     "SHOW_SEARCH_BAR": "إظهار شريط البحث",
@@ -1680,7 +1680,7 @@
     "NO_SCHEDULED_TITLE": "المهام المجدولة لليوم",
     "REPEATED_TASKS": "المهام المتكررة",
     "SCHEDULED_TASKS": "المهام المجدولة",
-    "SCHEDULED_TASKS_WITH_REMINDER": "المهام المجدولة مع التذكير",
+    "SCHEDULED_TASKS_WITH_TIME": "المهام المجدولة مع التذكير",
     "START_TASK": "بدء المهمة الآن وإزالة تذكير"
   },
   "THEMES": {

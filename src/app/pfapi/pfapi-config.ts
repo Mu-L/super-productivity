@@ -54,7 +54,7 @@ import { initialTimeTrackingState } from '../features/time-tracking/store/time-t
 import { CROSS_MODEL_MIGRATIONS } from './migrate/cross-model-migrations';
 import { validateAllData, appDataValidators } from './validate/validation-fn';
 
-export const CROSS_MODEL_VERSION = 2 as const;
+export const CROSS_MODEL_VERSION = 3 as const;
 
 export type PfapiAllModelCfg = {
   project: ModelCfg<ProjectState>;
@@ -197,9 +197,9 @@ export const PFAPI_SYNC_PROVIDERS = [
 export const PFAPI_CFG: PfapiBaseCfg<PfapiAllModelCfg> = {
   crossModelVersion: CROSS_MODEL_VERSION,
   validate: (data) => {
-    console.time('validateAllData');
+    // console.time('validateAllData');
     const r = validateAllData(data);
-    console.time('relatedDataValidation');
+    // console.time('relatedDataValidation');
     if (r.success && !isRelatedModelDataValid(data)) {
       return {
         success: false,
@@ -213,8 +213,8 @@ export const PFAPI_CFG: PfapiBaseCfg<PfapiAllModelCfg> = {
         ],
       };
     }
-    console.timeEnd('relatedDataValidation');
-    console.timeEnd('validateAllData');
+    // console.timeEnd('relatedDataValidation');
+    // console.timeEnd('validateAllData');
     return r;
   },
   onDbError: (err) => {

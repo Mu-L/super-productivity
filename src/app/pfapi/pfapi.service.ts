@@ -76,12 +76,13 @@ export class PfapiService {
       this.pf.ev,
       'syncStatusChange',
       async () => 'UNKNOWN_OR_CHANGED' as SyncStatusChangePayload,
-    ).pipe();
+    ).pipe(shareReplay(1));
 
   public readonly isSyncInProgress$: Observable<boolean> = this.syncState$.pipe(
     filter((state) => state !== 'UNKNOWN_OR_CHANGED'),
     map((state) => state === 'SYNCING'),
     distinctUntilChanged(),
+    shareReplay(1),
   );
 
   private readonly _commonAndLegacySyncConfig$ = this._store.select(selectSyncConfig);
@@ -104,17 +105,19 @@ export class PfapiService {
     });
 
     this._commonAndLegacySyncConfig$.subscribe(async (cfg) => {
-      // TODO handle android webdav
-      console.log('SEEEEEEEEEEEET', cfg.isEnabled, cfg.syncProvider, cfg);
-
-      this.pf.setActiveSyncProvider(
-        cfg.isEnabled ? (cfg.syncProvider as unknown as SyncProviderId) : null,
-      );
-      if (cfg.isEnabled) {
-        this.pf.setEncryptAndCompressCfg({
-          isEncrypt: cfg.isEncryptionEnabled,
-          isCompress: cfg.isCompressionEnabled,
-        });
+      try {
+        this.pf.setActiveSyncProvider(
+          cfg.isEnabled ? (cfg.syncProvider as unknown as SyncProviderId) : null,
+        );
+        if (cfg.isEnabled) {
+          this.pf.setEncryptAndCompressCfg({
+            isEncrypt: cfg.isEncryptionEnabled,
+            isCompress: cfg.isCompressionEnabled,
+          });
+        }
+      } catch (e) {
+        console.error(e);
+        alert('Unable to set sync provider. Please check your settings.');
       }
     });
   }

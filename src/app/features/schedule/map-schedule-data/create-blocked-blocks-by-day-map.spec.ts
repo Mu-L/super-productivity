@@ -1,5 +1,5 @@
 import { createBlockedBlocksByDayMap } from './create-blocked-blocks-by-day-map';
-import { TaskCopy, TaskPlanned } from '../../tasks/task.model';
+import { TaskCopy, TaskWithDueTime } from '../../tasks/task.model';
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -31,13 +31,13 @@ const fakeTaskEntry = (id = 'XXX', add?: Partial<TaskCopy>): TaskCopy => {
 const fakePlannedTaskEntry = (
   id = 'XXX',
   planedAt: Date,
-  add?: Partial<TaskPlanned>,
-): TaskPlanned => {
+  add?: Partial<TaskWithDueTime>,
+): TaskWithDueTime => {
   return {
     ...fakeTaskEntry(id, add),
-    plannedAt: planedAt.getTime(),
+    dueWithTime: planedAt.getTime(),
     reminderId: 'R_ID',
-  } as TaskPlanned;
+  } as TaskWithDueTime;
 };
 
 describe('createBlockedBlocksByDayMap()', () => {
@@ -139,7 +139,7 @@ describe('createBlockedBlocksByDayMap()', () => {
             {
               data: {
                 id: '1',
-                plannedAt: dhTz(1, 18),
+                dueWithTime: dhTz(1, 18),
                 reminderId: 'R_ID',
                 subTaskIds: [],
                 tagIds: [],
@@ -221,7 +221,7 @@ describe('createBlockedBlocksByDayMap()', () => {
           {
             data: {
               id: 'S1',
-              plannedAt: dhTz(1, 18),
+              dueWithTime: dhTz(1, 18),
               reminderId: 'R_ID',
               subTaskIds: [],
               tagIds: [],
@@ -249,7 +249,7 @@ describe('createBlockedBlocksByDayMap()', () => {
           {
             data: {
               id: 'S1',
-              plannedAt: 147600000,
+              dueWithTime: 147600000,
               reminderId: 'R_ID',
               subTaskIds: [],
               tagIds: [],
@@ -277,7 +277,7 @@ describe('createBlockedBlocksByDayMap()', () => {
           {
             data: {
               id: 'S1',
-              plannedAt: 147600000,
+              dueWithTime: 147600000,
               reminderId: 'R_ID',
               subTaskIds: [],
               tagIds: [],

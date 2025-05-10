@@ -999,7 +999,7 @@
         "REMINDER": "Нагадування",
         "REPEAT": "Повторення",
         "SCHEDULE_TASK": "Запланувати завдання",
-        "SCHEDULED_AT": "Заплановано на",
+        "DUE": "Заплановано на",
         "SUB_TASKS": "Підзавдання ({{nr}})",
         "TIME": "Час",
         "TITLE_PLACEHOLDER": "Введіть назву"
@@ -1611,7 +1611,7 @@
     "PROJECT_SETTINGS": "Налаштування проекту",
     "PROJECTS": "Проекти",
     "QUICK_HISTORY": "Швидка історія",
-    "REPEAT_SCHEDULED": "Повторення/Заплановані",
+    "ALL_PLANNED_LIST": "Повторення/Заплановані",
     "SCHEDULE": "Розклад",
     "SETTINGS": "Налаштування",
     "SHOW_SEARCH_BAR": "Показати рядок пошуку",
@@ -1680,7 +1680,7 @@
     "NO_SCHEDULED_TITLE": "Заплановані завдання на день",
     "REPEATED_TASKS": "Повторювані завдання",
     "SCHEDULED_TASKS": "Заплановані завдання",
-    "SCHEDULED_TASKS_WITH_REMINDER": "Заплановані завдання з нагадуванням",
+    "SCHEDULED_TASKS_WITH_TIME": "Заплановані завдання з нагадуванням",
     "START_TASK": "Почати завдання і видалити нагадування"
   },
   "THEMES": {

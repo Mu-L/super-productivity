@@ -50,6 +50,8 @@ export class Pfapi<const MD extends ModelCfgs> {
     isEncrypt: false,
   });
 
+  public readonly wasDataMigratedInitiallyPromise: Promise<void>;
+
   public readonly tmpBackupService: TmpBackupService<AllSyncModels<MD>>;
   public readonly db: Database;
   public readonly metaModel: MetaModelCtrl;
@@ -106,7 +108,7 @@ export class Pfapi<const MD extends ModelCfgs> {
       new EncryptAndCompressHandlerService(),
     );
 
-    this.migrationService.checkAndMigrateLocalDB();
+    this.wasDataMigratedInitiallyPromise = this.migrationService.checkAndMigrateLocalDB();
   }
 
   async sync(): Promise<{ status: SyncStatus; conflictData?: ConflictData }> {
@@ -149,6 +151,7 @@ export class Pfapi<const MD extends ModelCfgs> {
     if (activeProviderId) {
       const provider = this.syncProviders.find((sp) => sp.id === activeProviderId);
       if (!provider) {
+        console.log(provider, activeProviderId);
         throw new InvalidSyncProviderError();
       }
       this._activeSyncProvider$.next(provider);
@@ -233,9 +236,9 @@ export class Pfapi<const MD extends ModelCfgs> {
       this.cfg?.validate &&
       !this.cfg.validate(allData as AllSyncModels<MD>).success
     ) {
-      alert('Ohhhh!!! actually got one!!! ' + this._getAllSyncModelDataRetryCount);
+      pfLog(1, 'ACTUALLY GOT ONE!!');
       if (this._getAllSyncModelDataRetryCount >= 1) {
-        alert('THROW');
+        pfLog(1, 'ACTUALLY GOT ONE 2!! ERROR');
         this._getAllSyncModelDataRetryCount = 0;
         throw new DataValidationFailedError();
       }

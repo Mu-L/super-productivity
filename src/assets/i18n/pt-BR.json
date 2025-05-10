@@ -973,7 +973,7 @@
         "REMINDER": "Lembrete",
         "REPEAT": "Repita",
         "SCHEDULE_TASK": "Agendar tarefa",
-        "SCHEDULED_AT": "Programado para",
+        "DUE": "Programado para",
         "SUB_TASKS": "Subtarefas ( {{nr}})",
         "TIME": "Tempo",
         "TITLE_PLACEHOLDER": "Insira um título"
@@ -1576,7 +1576,7 @@
     "PROJECT_SETTINGS": "Configurações do projeto",
     "PROJECTS": "Projetos",
     "QUICK_HISTORY": "Histórico rápido",
-    "REPEAT_SCHEDULED": "Repetido/Programado",
+    "ALL_PLANNED_LIST": "Repetido/Programado",
     "SCHEDULE": "Linha do tempo",
     "SETTINGS": "Configurações",
     "SHOW_SEARCH_BAR": "Mostrar barra de pesquisa",
@@ -1645,7 +1645,7 @@
     "NO_SCHEDULED_TITLE": "Tarefas agendadas para o dia",
     "REPEATED_TASKS": "Tarefas repetidas",
     "SCHEDULED_TASKS": "Tarefas agendadas",
-    "SCHEDULED_TASKS_WITH_REMINDER": "Tarefas agendadas com lembrete",
+    "SCHEDULED_TASKS_WITH_TIME": "Tarefas agendadas com lembrete",
     "START_TASK": "Iniciar tarefa e remover lembrete"
   },
   "THEMES": {

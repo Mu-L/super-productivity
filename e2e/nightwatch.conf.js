@@ -1,6 +1,4 @@
 module.exports = {
-  // An array of folders (excluding subfolders) where your tests are located;
-  // if this is not specified, the test source must be passed as the second argument to the test runner.
   src_folders: ['../out-tsc/e2e/src'],
   output_folder: './e2e-test-results',
   custom_commands_path: 'out-tsc/e2e/commands',
@@ -17,6 +15,7 @@ module.exports = {
 
   test_settings: {
     default: {
+      persist_globals: true,
       launch_url: 'https://0.0.0.0:4200',
       desiredCapabilities: {
         browserName: 'chrome',
@@ -31,7 +30,6 @@ module.exports = {
             '--user-agent=NIGHTWATCH',
             `--binary=${process.env.CHROME_BIN}`,
           ],
-          // w3c: false,
           prefs: {
             'profile.default_content_setting_values.geolocation': 1,
             'profile.default_content_setting_values.notifications': 2,
@@ -39,15 +37,45 @@ module.exports = {
         },
       },
       screenshots: {
-        enabled: true, // if you want to keep screenshots
+        enabled: true,
         on_failure: true,
         on_error: true,
-        path: './e2e/screenshots', // save screenshots here
+        path: './e2e-test-results/screenshots',
       },
       globals: {
         waitForConditionPollInterval: 500,
         waitForConditionTimeout: 10000,
         retryAssertionTimeout: 1000,
+
+        beforeEach: async (browser) => {
+          //   const today = new Date();
+          //   today.setHours(17);
+          //   const fakeDateTS = today.getTime();
+          //
+          //   console.log('XXX');
+          //   browser.execute(() => {
+          //     console.log('AAAAAAa');
+          //     window.e2eTest = true;
+          //   });
+          //
+          //   // For newer Nightwatch versions (v2+)
+          //   if (browser.chrome && browser.chrome.sendDevToolsCommand) {
+          //     await browser.chrome.sendDevToolsCommand('Emulation.setVirtualTimePolicy', {
+          //       policy: 'pauseIfNetworkFetchesPending',
+          //       initialVirtualTime: fakeDateTS / 1000,
+          //     });
+          //   }
+          //   // Fallback to older method
+          //   else if (browser.driver) {
+          //     const session = await browser.driver.getDevToolsSession();
+          //     await session.send('Emulation.setVirtualTimePolicy', {
+          //       policy: 'pauseIfNetworkFetchesPending',
+          //       initialVirtualTime: fakeDateTS / 1000,
+          //     });
+          //   } else {
+          //     throw new Error('Unable to simulate other time');
+          //   }
+        },
       },
     },
   },

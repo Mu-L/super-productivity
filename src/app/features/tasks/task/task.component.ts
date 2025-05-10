@@ -23,7 +23,10 @@ import {
 } from '../task.model';
 import { MatDialog } from '@angular/material/dialog';
 import { DialogTimeEstimateComponent } from '../dialog-time-estimate/dialog-time-estimate.component';
-import { expandAnimation } from '../../../ui/animations/expand.ani';
+import {
+  expandAnimation,
+  expandInOnlyAnimation,
+} from '../../../ui/animations/expand.ani';
 import { GlobalConfigService } from '../../config/global-config.service';
 import { checkKeyCombo } from '../../../util/check-key-combo';
 import {
@@ -48,22 +51,15 @@ import {
   MatMenuItem,
   MatMenuTrigger,
 } from '@angular/material/menu';
-import { TODAY_TAG } from '../../tag/tag.const';
 import { WorkContextService } from '../../work-context/work-context.service';
 import { throttle } from 'helpful-decorators';
 import { TaskRepeatCfgService } from '../../task-repeat-cfg/task-repeat-cfg.service';
 import { DialogConfirmComponent } from '../../../ui/dialog-confirm/dialog-confirm.component';
 import { Update } from '@ngrx/entity';
 import { isToday } from '../../../util/is-today.util';
-import {
-  isShowAddToToday,
-  isShowRemoveFromToday,
-  isTodayTag,
-} from '../util/is-task-today';
 import { IS_TOUCH_PRIMARY } from '../../../util/is-mouse-primary';
 import { KeyboardConfig } from '../../config/keyboard-config.model';
 import { DialogScheduleTaskComponent } from '../../planner/dialog-schedule-task/dialog-schedule-task.component';
-import { PlannerService } from '../../planner/planner.service';
 import { TaskContextMenuComponent } from '../task-context-menu/task-context-menu.component';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ICAL_TYPE } from '../../issue/issue.const';
@@ -74,7 +70,6 @@ import { MatIconButton, MatMiniFabButton } from '@angular/material/button';
 import { TaskHoverControlsComponent } from './task-hover-controls/task-hover-controls.component';
 import { ProgressBarComponent } from '../../../ui/progress-bar/progress-bar.component';
 import { TaskListComponent } from '../task-list/task-list.component';
-import { AsyncPipe } from '@angular/common';
 import { MsToStringPipe } from '../../../ui/duration/ms-to-string.pipe';
 import { ShortPlannedAtPipe } from '../../../ui/pipes/short-planned-at.pipe';
 import { LocalDateStrPipe } from '../../../ui/pipes/local-date-str.pipe';
@@ -83,15 +78,21 @@ import { IssueIconPipe } from '../../issue/issue-icon/issue-icon.pipe';
 import { SubTaskTotalTimeSpentPipe } from '../pipes/sub-task-total-time-spent.pipe';
 import { TagListComponent } from '../../tag/tag-list/tag-list.component';
 import { ShortDate2Pipe } from '../../../ui/pipes/short-date2.pipe';
-import { TagService } from '../../tag/tag.service';
 import { TagToggleMenuListComponent } from '../../tag/tag-toggle-menu-list/tag-toggle-menu-list.component';
+import { Store } from '@ngrx/store';
+import { selectTodayTagTaskIds } from '../../tag/store/tag.reducer';
+import { planTasksForToday } from '../../tag/store/tag.actions';
+import { unScheduleTask } from '../store/task.actions';
+import { environment } from '../../../../environments/environment';
+import { TODAY_TAG } from '../../tag/tag.const';
+import { GlobalTrackingIntervalService } from '../../../core/global-tracking-interval/global-tracking-interval.service';
 
 @Component({
   selector: 'task',
   templateUrl: './task.component.html',
   styleUrls: ['./task.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  animations: [expandAnimation, fadeAnimation, swirlAnimation],
+  animations: [expandAnimation, fadeAnimation, swirlAnimation, expandInOnlyAnimation],
   /* eslint-disable @typescript-eslint/naming-convention*/
   host: {
     '[id]': 'taskIdWithPrefix()',
@@ -115,7 +116,6 @@ import { TagToggleMenuListComponent } from '../../tag/tag-toggle-menu-list/tag-t
     MatMenu,
     MatMenuContent,
     MatMenuItem,
-    AsyncPipe,
     MsToStringPipe,
     ShortDate2Pipe,
     LocalDateStrPipe,
@@ -135,9 +135,9 @@ export class TaskComponent implements OnDestroy, AfterViewInit {
   private readonly _attachmentService = inject(TaskAttachmentService);
   private readonly _elementRef = inject(ElementRef);
   private readonly _renderer = inject(Renderer2);
+  private readonly _store = inject(Store);
   private readonly _projectService = inject(ProjectService);
-  private readonly _tagService = inject(TagService);
-  readonly plannerService = inject(PlannerService);
+  private readonly _globalTrackingIntervalService = inject(GlobalTrackingIntervalService);
   readonly workContextService = inject(WorkContextService);
 
   task = input.required<TaskWithSubTasks>();
@@ -149,17 +149,62 @@ export class TaskComponent implements OnDestroy, AfterViewInit {
   isCurrent = computed(() => this.currentId() === this.task().id);
   selectedId = toSignal(this._taskService.selectedTaskId$);
   isSelected = computed(() => this.selectedId() === this.task().id);
+  todayStr = toSignal(this._globalTrackingIntervalService.todayDateStr$);
 
-  isTodayTag = computed(() => isTodayTag(this.task()));
+  todayList = toSignal(this._store.select(selectTodayTagTaskIds), { initialValue: [] });
+  isTaskOnTodayList = computed(() => this.todayList().includes(this.task().id));
   isTodayListActive = computed(() => this.workContextService.isToday);
   taskIdWithPrefix = computed(() => 't-' + this.task().id);
   isRepeatTaskCreatedToday = computed(
     () => !!(this.task().repeatCfgId && isToday(this.task().created)),
   );
+  isOverdue = computed(() => {
+    const t = this.task();
+    return (
+      !t.isDone &&
+      ((t.dueWithTime && t.dueWithTime < Date.now()) ||
+        (t.dueDay && !isToday(new Date(t.dueDay)) && new Date(t.dueDay) < new Date()))
+    );
+  });
+  isScheduledToday = computed(() => {
+    const t = this.task();
+    return (
+      (t.dueWithTime && isToday(t.dueWithTime)) ||
+      (t.dueDay && t.dueDay === this.todayStr())
+    );
+  });
+
+  isShowDueDayBtn = computed(() => {
+    return (
+      this.task().dueDay &&
+      (!this.isTodayListActive() ||
+        this.isOverdue() ||
+        this.task().dueDay !== this.todayStr() ||
+        !environment.production)
+    );
+  });
 
   progress = computed<number>(() => {
     const t = this.task();
     return (t.timeEstimate && (t.timeSpent / t.timeEstimate) * 100) || 0;
+  });
+
+  isShowRemoveFromToday = computed(() => {
+    return (
+      !this.isTodayListActive() &&
+      !this.task().isDone &&
+      this.task().dueDay === this.todayStr()
+    );
+  });
+
+  isShowAddToToday = computed(() => {
+    const task = this.task();
+    return this.isTodayListActive()
+      ? (task.dueWithTime && !isToday(task.dueWithTime)) ||
+          (task.dueDay && task.dueDay !== this.todayStr())
+      : !this.isShowRemoveFromToday() &&
+          task.dueDay !== this.todayStr() &&
+          (!task.dueWithTime || !isToday(task.dueWithTime));
   });
 
   T: typeof T = T;
@@ -171,6 +216,7 @@ export class TaskComponent implements OnDestroy, AfterViewInit {
   isActionTriggered: boolean = false;
   ShowSubTasksMode: typeof HideSubTasksMode = HideSubTasksMode;
   isFirstLineHover: boolean = false;
+  _nextFocusTaskEl?: HTMLElement;
 
   readonly taskTitleEditEl = viewChild<TaskTitleComponent>('taskTitleEditEl');
   readonly blockLeftElRef = viewChild<ElementRef>('blockLeftEl');
@@ -207,6 +253,7 @@ export class TaskComponent implements OnDestroy, AfterViewInit {
 
   private _dragEnterTarget?: HTMLElement;
   private _currentPanTimeout?: number;
+  private _doubleClickTimeout?: number;
   private _isTaskDeleteTriggered = false;
 
   // methods come last
@@ -245,6 +292,13 @@ export class TaskComponent implements OnDestroy, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
+    // TODO remove
+    if (!environment.production) {
+      if (this.task().tagIds.includes(TODAY_TAG.id)) {
+        throw new Error('Task should not have today tag');
+      }
+    }
+
     // hacky but relatively performant
     const t = this.task();
     if (t.parentId && !t.title.length && Date.now() - 200 < t.created) {
@@ -267,17 +321,11 @@ export class TaskComponent implements OnDestroy, AfterViewInit {
 
   ngOnDestroy(): void {
     window.clearTimeout(this._currentPanTimeout);
-  }
-
-  isShowRemoveFromToday(): boolean {
-    return !this.workContextService.isToday && isShowRemoveFromToday(this.task());
-  }
-
-  isShowAddToToday(): boolean {
-    return isShowAddToToday(this.task(), this.workContextService.isToday);
+    window.clearTimeout(this._doubleClickTimeout);
   }
 
   scheduleTask(): void {
+    this._storeNextFocusEl();
     this._matDialog
       .open(DialogScheduleTaskComponent, {
         // we focus inside dialog instead
@@ -285,13 +333,8 @@ export class TaskComponent implements OnDestroy, AfterViewInit {
         data: { task: this.task() },
       })
       .afterClosed()
-      // .pipe(takeUntil(this._destroy$))
       .subscribe((isPlanned) => {
-        if (isPlanned) {
-          this.focusNext(true);
-        } else {
-          this.focusSelf();
-        }
+        this.focusSelfOrNextIfNotPossible();
       });
   }
 
@@ -396,7 +439,20 @@ export class TaskComponent implements OnDestroy, AfterViewInit {
     this.focusSelf();
   }
 
+  private _wasClickedInDoubleClickRange = false;
+
   toggleShowDetailPanel(ev?: MouseEvent): void {
+    const isInTaskDetailPanel =
+      this._elementRef.nativeElement.closest('task-detail-panel');
+    if (isInTaskDetailPanel && !this._wasClickedInDoubleClickRange) {
+      this._wasClickedInDoubleClickRange = true;
+      window.clearTimeout(this._doubleClickTimeout);
+      this._doubleClickTimeout = window.setTimeout(() => {
+        this._wasClickedInDoubleClickRange = false;
+      }, 400);
+      return;
+    }
+
     if (this.isSelected()) {
       this._taskService.setSelectedId(null);
     } else {
@@ -446,11 +502,13 @@ export class TaskComponent implements OnDestroy, AfterViewInit {
   }
 
   addToMyDay(): void {
-    this._taskService.addTodayTag(this.task());
+    this._store.dispatch(planTasksForToday({ taskIds: [this.task().id] }));
   }
 
-  removeFromMyDay(): void {
-    this.onTagsUpdated(this.task().tagIds.filter((tagId) => tagId !== TODAY_TAG.id));
+  unschedule(): void {
+    this._store.dispatch(
+      unScheduleTask({ id: this.task().id, reminderId: this.task().reminderId }),
+    );
   }
 
   focusPrevious(isFocusReverseIfNotPossible: boolean = false): void {
@@ -487,24 +545,8 @@ export class TaskComponent implements OnDestroy, AfterViewInit {
       return;
     }
 
-    const taskEls = Array.from(document.querySelectorAll('task'));
-    const activeEl =
-      document.activeElement?.tagName.toLowerCase() === 'task'
-        ? document.activeElement
-        : document.activeElement?.closest('task');
-    const currentIndex = taskEls.findIndex((el) => el === activeEl);
-    const nextEl = isTaskMovedInList
-      ? (() => {
-          // if a parent task is moved in list, as it is for when toggling done,
-          // we don't want to focus the next sub-task, but the next main task instead
-          if (this.task().subTaskIds.length) {
-            return taskEls.find((el, i) => {
-              return i > currentIndex && el.parentElement?.closest('task');
-            }) as HTMLElement | undefined;
-          }
-          return taskEls[currentIndex + 1] as HTMLElement;
-        })()
-      : (taskEls[currentIndex + 1] as HTMLElement);
+    const nextEl = this._getNextFocusEl(isTaskMovedInList);
+    this._nextFocusTaskEl = undefined;
 
     if (nextEl) {
       nextEl.focus();
@@ -523,9 +565,24 @@ export class TaskComponent implements OnDestroy, AfterViewInit {
     if (IS_TOUCH_PRIMARY) {
       return;
     }
-
     this.focusSelfElement();
-    // this._taskService.focusTask(this.task().id);
+  }
+
+  focusSelfOrNextIfNotPossible(): void {
+    if (IS_TOUCH_PRIMARY) {
+      return;
+    }
+
+    this.focusSelf();
+    // we don't clear the timeout since this should be executed if task is gone
+    window.setTimeout(() => {
+      if (
+        !document.activeElement ||
+        document.activeElement.tagName.toLowerCase() !== 'task'
+      ) {
+        this.focusNext(true);
+      }
+    }, 200);
   }
 
   focusSelfElement(): void {
@@ -599,23 +656,12 @@ export class TaskComponent implements OnDestroy, AfterViewInit {
       if (this.isLockPanLeft) {
         this._renderer.setStyle(blockRightElRef.nativeElement, 'transform', `scaleX(1)`);
         this._currentPanTimeout = window.setTimeout(() => {
-          if (this.workContextService.isToday) {
-            if (this.task().repeatCfgId) {
-              this.editTaskRepeatCfg();
-            } else {
-              this.scheduleTask();
-            }
+          if (this.task().repeatCfgId) {
+            this.editTaskRepeatCfg();
           } else {
-            if (this.task().parentId) {
-              // NOTHING
-            } else {
-              if (this.task().tagIds.includes(TODAY_TAG.id)) {
-                this.removeFromMyDay();
-              } else {
-                this.addToMyDay();
-              }
-            }
+            this.scheduleTask();
           }
+
           this._resetAfterPan();
         }, 100);
       } else if (this.isLockPanRight) {
@@ -731,8 +777,8 @@ export class TaskComponent implements OnDestroy, AfterViewInit {
     const t = this.task();
     if (t.projectId && !t.parentId) {
       this._projectService.moveTaskToBacklog(t.id, t.projectId);
-      if (t.tagIds.includes(TODAY_TAG.id)) {
-        this.removeFromMyDay();
+      if (this.isTaskOnTodayList()) {
+        this.unschedule();
       }
     }
   }
@@ -747,6 +793,36 @@ export class TaskComponent implements OnDestroy, AfterViewInit {
 
   trackByProjectId(i: number, project: Project): string {
     return project.id;
+  }
+
+  private _storeNextFocusEl(): void {
+    this._nextFocusTaskEl = this._getNextFocusEl();
+  }
+
+  private _getNextFocusEl(isTaskMovedInList = false): HTMLElement | undefined {
+    if (this._nextFocusTaskEl) {
+      return this._nextFocusTaskEl;
+    }
+
+    const taskEls = Array.from(document.querySelectorAll('task'));
+    const activeEl =
+      document.activeElement?.tagName.toLowerCase() === 'task'
+        ? document.activeElement
+        : document.activeElement?.closest('task');
+    const currentIndex = taskEls.findIndex((el) => el === activeEl);
+    const nextEl = isTaskMovedInList
+      ? (() => {
+          // if a parent task is moved in list, as it is for when toggling done,
+          // we don't want to focus the next sub-task, but the next main task instead
+          if (this.task().subTaskIds.length) {
+            return taskEls.find((el, i) => {
+              return i > currentIndex && el.parentElement?.closest('task');
+            }) as HTMLElement | undefined;
+          }
+          return taskEls[currentIndex + 1] as HTMLElement;
+        })()
+      : (taskEls[currentIndex + 1] as HTMLElement);
+    return nextEl;
   }
 
   private _handlePan(ev: any): void {

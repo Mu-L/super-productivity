@@ -2,10 +2,10 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  inject,
   LOCALE_ID,
   OnDestroy,
   OnInit,
-  inject,
 } from '@angular/core';
 import { Task, TaskReminderOptionId } from '../../tasks/task.model';
 import {
@@ -33,7 +33,6 @@ import { TagService } from '../../tag/tag.service';
 import { unique } from '../../../util/unique';
 import { Tag } from '../../tag/tag.model';
 import { exists } from '../../../util/exists';
-import { TODAY_TAG } from '../../tag/tag.const';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { getWorklogStr } from '../../../util/get-work-log-str';
 import { first } from 'rxjs/operators';
@@ -101,18 +100,17 @@ export class DialogEditTaskRepeatCfgComponent implements OnInit, OnDestroy {
       this._setRepeatCfgInitiallyForEditOnly(this._data.repeatCfg);
       this.isEdit = true;
     } else if (this._data.task) {
-      const startTime = this._data.task.plannedAt
-        ? clockStringFromDate(this._data.task.plannedAt)
+      const startTime = this._data.task.dueWithTime
+        ? clockStringFromDate(this._data.task.dueWithTime)
         : undefined;
       this.repeatCfg = {
         ...DEFAULT_TASK_REPEAT_CFG,
-        startDate: getWorklogStr(this._data.task.plannedAt || undefined),
+        startDate: getWorklogStr(this._data.task.dueWithTime || undefined),
         startTime,
         remindAt: startTime ? TaskReminderOptionId.AtStart : undefined,
         title: this._data.task.title,
         notes: this._data.task.notes || undefined,
-        // NOTE: always add today tag, as that's likely what we want
-        tagIds: unique([TODAY_TAG.id, ...this._data.task.tagIds]),
+        tagIds: unique(this._data.task.tagIds),
         defaultEstimate: this._data.task.timeEstimate,
       };
       this.isEdit = !!this._data.task.repeatCfgId;

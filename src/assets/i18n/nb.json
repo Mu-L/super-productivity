@@ -999,7 +999,7 @@
         "REMINDER": "Påminnelse",
         "REPEAT": "Gjenta",
         "SCHEDULE_TASK": "Planlegg oppgave",
-        "SCHEDULED_AT": "Planlagt på",
+        "DUE": "Planlagt på",
         "SUB_TASKS": "Underoppgaver ({{nr}})",
         "TIME": "Tid",
         "TITLE_PLACEHOLDER": "Skriv inn en tittel"
@@ -1611,7 +1611,7 @@
     "PROJECT_SETTINGS": "Prosjektinnstillinger",
     "PROJECTS": "Prosjekter",
     "QUICK_HISTORY": "Rask historikk",
-    "REPEAT_SCHEDULED": "Gjentatt/planlagt",
+    "ALL_PLANNED_LIST": "Gjentatt/planlagt",
     "SCHEDULE": "Planlegge",
     "SETTINGS": "Innstillinger",
     "SHOW_SEARCH_BAR": "Vis søkefelt",
@@ -1680,7 +1680,7 @@
     "NO_SCHEDULED_TITLE": "Planlagte oppgaver for dagen",
     "REPEATED_TASKS": "Gjentatte oppgaver",
     "SCHEDULED_TASKS": "Planlagte oppgaver",
-    "SCHEDULED_TASKS_WITH_REMINDER": "Planlagte oppgaver med påminnelse",
+    "SCHEDULED_TASKS_WITH_TIME": "Planlagte oppgaver med påminnelse",
     "START_TASK": "Start oppgaven og fjern påminnelsen"
   },
   "THEMES": {

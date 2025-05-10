@@ -47,7 +47,6 @@ import {
   selectUnarchivedHiddenProjectIds,
   selectUnarchivedVisibleProjects,
 } from '../../features/project/store/project.selectors';
-import { updateProject } from '../../features/project/store/project.actions';
 import { SideNavItemComponent } from './side-nav-item/side-nav-item.component';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { MatIcon } from '@angular/material/icon';
@@ -56,6 +55,7 @@ import { MatTooltip } from '@angular/material/tooltip';
 import { ContextMenuComponent } from '../../ui/context-menu/context-menu.component';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AsyncPipe } from '@angular/common';
+import { toggleHideFromMenu } from '../../features/project/store/project.actions';
 
 @Component({
   selector: 'side-nav',
@@ -121,12 +121,15 @@ export class SideNavComponent implements OnDestroy {
   isTagsExpanded$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(
     this.isTagsExpanded,
   );
+
+  tagListToDisplay$: Observable<Tag[]> = this.tagService.tagsNoMyDayAndNoList$;
+
   tagList$: Observable<Tag[]> = this.isTagsExpanded$.pipe(
     switchMap((isExpanded) =>
       isExpanded
-        ? this.tagService.tagsNoMyDayAndNoList$
+        ? this.tagListToDisplay$
         : combineLatest([
-            this.tagService.tagsNoMyDayAndNoList$,
+            this.tagListToDisplay$,
             this.workContextService.activeWorkContextId$,
           ]).pipe(map(([tags, id]) => tags.filter((t) => t.id === id))),
     ),
@@ -277,14 +280,7 @@ export class SideNavComponent implements OnDestroy {
   }
 
   toggleProjectVisibility(project: Project): void {
-    this._store.dispatch(
-      updateProject({
-        project: {
-          id: project.id,
-          changes: { isHiddenFromMenu: !project.isHiddenFromMenu },
-        },
-      }),
-    );
+    this._store.dispatch(toggleHideFromMenu({ id: project.id }));
   }
 
   async dropOnProjectList(
@@ -312,6 +308,7 @@ export class SideNavComponent implements OnDestroy {
       const allIds = allItems.map((p) => p.id);
       const targetTagId = allIds[ev.currentIndex] as string;
       if (targetTagId) {
+        // special today list should always be first
         const newIds = [TODAY_TAG.id, ...moveItemBeforeItem(allIds, tag.id, targetTagId)];
         this.tagService.updateOrder(newIds);
       }

@@ -41,6 +41,17 @@
     <mat-icon>grid_view</mat-icon>
     <span class="text">{{ T.MH.BOARDS | translate }}</span>
   </button>
+
+  @let inboxContext = workContextService.inboxWorkContext$ | async;
+  @if (inboxContext) {
+    <side-nav-item
+      #menuEntry
+      [type]="WorkContextType.TAG"
+      [defaultIcon]="inboxContext.icon"
+      [workContext]="inboxContext"
+      [activeWorkContextId]="activeWorkContextId"
+    ></side-nav-item>
+  }
 </section>
 
 @if (nonHiddenProjects$ | async; as projectList) {
@@ -75,7 +86,7 @@
       </button>
       <button
         (click)="addProject()"
-        class="additional-btn"
+        class="additional-btn e2e-add-project-btn"
         mat-icon-button
         [matTooltip]="T.MH.CREATE_PROJECT | translate"
       >
@@ -123,6 +134,9 @@
         ></side-nav-item>
       }
     </div>
+    @if (!projectList.length && isProjectsExpanded) {
+      <div class="no-tags-info">{{ T.MH.NO_PROJECT_INFO | translate }}</div>
+    }
   </section>
 }
 @if (tagList$ | async; as tagList) {
@@ -181,8 +195,9 @@
     routerLink="scheduled-list"
     routerLinkActive="isActiveRoute"
   >
-    <mat-icon svgIcon="repeat"></mat-icon>
-    <span class="text">{{ T.MH.REPEAT_SCHEDULED | translate }}</span>
+    <!--    <mat-icon>history</mat-icon>-->
+    <mat-icon>list</mat-icon>
+    <span class="text">{{ T.MH.ALL_PLANNED_LIST | translate }}</span>
   </button>
   <button
     #menuEntry

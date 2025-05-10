@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { select, Store } from '@ngrx/store';
 import {
   selectAllTaskRepeatCfgs,
@@ -6,7 +6,6 @@ import {
   selectTaskRepeatCfgByIdAllowUndefined,
   selectTaskRepeatCfgsDueOnDayIncludingOverdue,
   selectTaskRepeatCfgsDueOnDayOnly,
-  selectTaskRepeatCfgsWithStartTime,
 } from './store/task-repeat-cfg.reducer';
 import {
   addTaskRepeatCfgToTask,
@@ -26,11 +25,10 @@ import { nanoid } from 'nanoid';
 import { DialogConfirmComponent } from '../../ui/dialog-confirm/dialog-confirm.component';
 import { MatDialog } from '@angular/material/dialog';
 import { T } from '../../t.const';
-import { take } from 'rxjs/operators';
+import { first, take } from 'rxjs/operators';
 import { TaskService } from '../tasks/task.service';
-import { TODAY_TAG } from '../tag/tag.const';
 import { Task } from '../tasks/task.model';
-import { addTask, scheduleTask } from '../tasks/store/task.actions';
+import { addTask, scheduleTaskWithTime } from '../tasks/store/task.actions';
 import { WorkContextService } from '../work-context/work-context.service';
 import { WorkContextType } from '../work-context/work-context.model';
 import { isValidSplitTime } from '../../util/is-valid-split-time';
@@ -38,6 +36,7 @@ import { getDateTimeFromClockString } from '../../util/get-date-time-from-clock-
 import { isSameDay } from '../../util/is-same-day';
 import { remindOptionToMilliseconds } from '../tasks/util/remind-option-to-milliseconds';
 import { getNewestPossibleDueDate } from './store/get-newest-possible-due-date.util';
+import { getWorklogStr } from '../../util/get-work-log-str';
 
 @Injectable({
   providedIn: 'root',
@@ -52,20 +51,18 @@ export class TaskRepeatCfgService {
     select(selectAllTaskRepeatCfgs),
   );
 
-  taskRepeatCfgsWithStartTime$: Observable<TaskRepeatCfg[]> = this._store$.pipe(
-    select(selectTaskRepeatCfgsWithStartTime),
-  );
-
-  getRepeatTableTasksDueForDayOnly$(dayDate: number): Observable<TaskRepeatCfg[]> {
+  getRepeatableTasksDueForDayOnly$(dayDate: number): Observable<TaskRepeatCfg[]> {
     // ===> taskRepeatCfgs scheduled for today and not yet created already
     return this._store$.select(selectTaskRepeatCfgsDueOnDayOnly, { dayDate });
   }
 
-  getRepeatTableTasksDueForDayIncludingOverdue$(
+  getRepeatableTasksDueForDayIncludingOverdue$(
     dayDate: number,
   ): Observable<TaskRepeatCfg[]> {
     // ===> taskRepeatCfgs scheduled for today and not yet created already
-    return this._store$.select(selectTaskRepeatCfgsDueOnDayIncludingOverdue, { dayDate });
+    return this._store$
+      .select(selectTaskRepeatCfgsDueOnDayIncludingOverdue, { dayDate })
+      .pipe(first());
   }
 
   getTaskRepeatCfgById$(id: string): Observable<TaskRepeatCfg> {
@@ -162,7 +159,7 @@ export class TaskRepeatCfgService {
     (
       | ReturnType<typeof addTask>
       | ReturnType<typeof updateTaskRepeatCfg>
-      | ReturnType<typeof scheduleTask>
+      | ReturnType<typeof scheduleTaskWithTime>
     )[]
   > {
     // NOTE: there might be multiple configs in case something went wrong
@@ -196,7 +193,7 @@ export class TaskRepeatCfgService {
     const createNewActions: (
       | ReturnType<typeof addTask>
       | ReturnType<typeof updateTaskRepeatCfg>
-      | ReturnType<typeof scheduleTask>
+      | ReturnType<typeof scheduleTaskWithTime>
     )[] = [
       addTask({
         task: {
@@ -204,6 +201,7 @@ export class TaskRepeatCfgService {
           // NOTE if moving this to top isCreateNew check above would not work as intended
           // we use created also for the repeat day label for past tasks
           created: targetCreated.getTime(),
+          dueDay: getWorklogStr(targetCreated),
         },
         workContextType: this._workContextService
           .activeWorkContextType as WorkContextType,
@@ -218,7 +216,6 @@ export class TaskRepeatCfgService {
             lastTaskCreation: targetDayDate,
           },
         },
-        // TODO fix type
       }),
     ];
 
@@ -229,9 +226,9 @@ export class TaskRepeatCfgService {
         targetDayDate,
       );
       createNewActions.push(
-        scheduleTask({
+        scheduleTaskWithTime({
           task,
-          plannedAt: dateTime,
+          dueWithTime: dateTime,
           remindAt: remindOptionToMilliseconds(dateTime, taskRepeatCfg.remindAt),
           isMoveToBacklog: false,
           isSkipAutoRemoveFromToday: true,
@@ -246,8 +243,6 @@ export class TaskRepeatCfgService {
     task: Task;
     isAddToBottom: boolean;
   } {
-    const isAddToTodayAsFallback =
-      !taskRepeatCfg.projectId && !taskRepeatCfg.tagIds.length;
     return {
       task: this._taskService.createNewTaskWithDefaults({
         title: taskRepeatCfg.title,
@@ -255,8 +250,9 @@ export class TaskRepeatCfgService {
           repeatCfgId: taskRepeatCfg.id,
           timeEstimate: taskRepeatCfg.defaultEstimate,
           projectId: taskRepeatCfg.projectId || undefined,
-          tagIds: isAddToTodayAsFallback ? [TODAY_TAG.id] : taskRepeatCfg.tagIds || [],
           notes: taskRepeatCfg.notes || '',
+          // always due for today
+          dueDay: getWorklogStr(),
         },
       }),
       isAddToBottom: taskRepeatCfg.order > 0,

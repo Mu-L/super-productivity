@@ -999,7 +999,7 @@
         "REMINDER": "Erinnerung",
         "REPEAT": "Wiederholen",
         "SCHEDULE_TASK": "Aufgabe planen",
-        "SCHEDULED_AT": "Geplant am",
+        "DUE": "Geplant am",
         "SUB_TASKS": "Unteraufgaben ({{nr}})",
         "TIME": "Zeit",
         "TITLE_PLACEHOLDER": "Einen Titel eingeben"
@@ -1611,7 +1611,7 @@
     "PROJECT_SETTINGS": "Projekt Einstellungen",
     "PROJECTS": "Projekte",
     "QUICK_HISTORY": "Schnellverlauf",
-    "REPEAT_SCHEDULED": "Wiederkehrend",
+    "ALL_PLANNED_LIST": "Wiederkehrend",
     "SCHEDULE": "Stundenplan",
     "SETTINGS": "Einstellungen",
     "SHOW_SEARCH_BAR": "Suchleiste anzeigen",
@@ -1680,7 +1680,7 @@
     "NO_SCHEDULED_TITLE": "Geplante Aufgaben für den Tag",
     "REPEATED_TASKS": "Wiederkehrende Aufgaben",
     "SCHEDULED_TASKS": "Geplante Aufgaben",
-    "SCHEDULED_TASKS_WITH_REMINDER": "Geplante Aufgaben mit Erinnerung",
+    "SCHEDULED_TASKS_WITH_TIME": "Geplante Aufgaben mit Erinnerung",
     "START_TASK": "Aufgabe jetzt starten und Erinnerung entfernen"
   },
   "THEMES": {

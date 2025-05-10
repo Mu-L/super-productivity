@@ -999,7 +999,7 @@
         "REMINDER": "یادآور",
         "REPEAT": "تکرار",
         "SCHEDULE_TASK": "برنامه ریزی کار",
-        "SCHEDULED_AT": "برنامه ریزی شده در",
+        "DUE": "برنامه ریزی شده در",
         "SUB_TASKS": "وظایف فرعی ({{nr}})",
         "TIME": "زمان",
         "TITLE_PLACEHOLDER": "عنوانی را وارد کنید"
@@ -1611,7 +1611,7 @@
     "PROJECT_SETTINGS": "تنظیمات پروژه",
     "PROJECTS": "پروژه ها",
     "QUICK_HISTORY": "تاریخچه سریع",
-    "REPEAT_SCHEDULED": "تکرار/برنامه ریزی شده",
+    "ALL_PLANNED_LIST": "تکرار/برنامه ریزی شده",
     "SCHEDULE": "برنامه ریزی کنید",
     "SETTINGS": "تنظیمات",
     "SHOW_SEARCH_BAR": "نمایش نوار جستجو",
@@ -1680,7 +1680,7 @@
     "NO_SCHEDULED_TITLE": "وظایف برنامه ریزی شده برای روز",
     "REPEATED_TASKS": "کارهای تکراری",
     "SCHEDULED_TASKS": "وظایف برنامه ریزی شده",
-    "SCHEDULED_TASKS_WITH_REMINDER": "کارهای برنامه ریزی شده با یادآوری",
+    "SCHEDULED_TASKS_WITH_TIME": "کارهای برنامه ریزی شده با یادآوری",
     "START_TASK": "Start task now and remove reminder"
   },
   "THEMES": {

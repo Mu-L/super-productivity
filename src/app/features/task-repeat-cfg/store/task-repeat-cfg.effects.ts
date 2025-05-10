@@ -2,7 +2,6 @@ import { inject, Injectable } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import {
   concatMap,
-  delay,
   filter,
   first,
   map,
@@ -12,115 +11,32 @@ import {
   tap,
   withLatestFrom,
 } from 'rxjs/operators';
-import { Action, select, Store } from '@ngrx/store';
 import {
   addTaskRepeatCfgToTask,
   deleteTaskRepeatCfg,
-  deleteTaskRepeatCfgs,
   updateTaskRepeatCfg,
-  updateTaskRepeatCfgs,
-  upsertTaskRepeatCfg,
 } from './task-repeat-cfg.actions';
-import { selectTaskRepeatCfgFeatureState } from './task-repeat-cfg.reducer';
 import { Task, TaskCopy } from '../../tasks/task.model';
 import { updateTask } from '../../tasks/store/task.actions';
 import { TaskService } from '../../tasks/task.service';
 import { TaskRepeatCfgService } from '../task-repeat-cfg.service';
-import {
-  TaskRepeatCfg,
-  TaskRepeatCfgCopy,
-  TaskRepeatCfgState,
-} from '../task-repeat-cfg.model';
-import { forkJoin, from, merge, of } from 'rxjs';
-import { setActiveWorkContext } from '../../work-context/store/work-context.actions';
-import { SyncTriggerService } from '../../../imex/sync/sync-trigger.service';
-import { SyncWrapperService } from '../../../imex/sync/sync-wrapper.service';
-import { sortRepeatableTaskCfgs } from '../sort-repeatable-task-cfg';
+import { TaskRepeatCfgCopy } from '../task-repeat-cfg.model';
+import { forkJoin, of } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
 import { DialogConfirmComponent } from '../../../ui/dialog-confirm/dialog-confirm.component';
 import { T } from '../../../t.const';
 import { Update } from '@ngrx/entity';
 import { getDateTimeFromClockString } from '../../../util/get-date-time-from-clock-string';
 import { isToday } from '../../../util/is-today.util';
-import { DateService } from 'src/app/core/date/date.service';
-import { deleteProject } from '../../project/store/project.actions';
-import { PfapiService } from '../../../pfapi/pfapi.service';
 import { TaskArchiveService } from '../../time-tracking/task-archive.service';
 
 @Injectable()
 export class TaskRepeatCfgEffects {
   private _actions$ = inject(Actions);
   private _taskService = inject(TaskService);
-  private _store$ = inject<Store<any>>(Store);
-  private _pfapiService = inject(PfapiService);
-  private _dateService = inject(DateService);
   private _taskRepeatCfgService = inject(TaskRepeatCfgService);
-  private _syncTriggerService = inject(SyncTriggerService);
-  private _syncWrapperService = inject(SyncWrapperService);
   private _matDialog = inject(MatDialog);
   private _taskArchiveService = inject(TaskArchiveService);
-
-  updateTaskRepeatCfgs$: any = createEffect(
-    () =>
-      this._actions$.pipe(
-        ofType(
-          addTaskRepeatCfgToTask,
-          updateTaskRepeatCfg,
-          updateTaskRepeatCfgs,
-          upsertTaskRepeatCfg,
-          deleteTaskRepeatCfg,
-          deleteTaskRepeatCfgs,
-
-          // PROJECT
-          deleteProject,
-        ),
-        withLatestFrom(this._store$.pipe(select(selectTaskRepeatCfgFeatureState))),
-        tap(this._saveToLs.bind(this)),
-      ),
-    { dispatch: false },
-  );
-
-  private triggerRepeatableTaskCreation$ = merge(
-    this._syncTriggerService.afterInitialSyncDoneAndDataLoadedInitially$,
-    this._actions$.pipe(
-      ofType(setActiveWorkContext),
-      concatMap(() => this._syncWrapperService.afterCurrentSyncDoneOrSyncDisabled$),
-    ),
-  ).pipe(
-    // make sure everything has settled
-    delay(1000),
-  );
-
-  createRepeatableTasks: any = createEffect(() =>
-    this.triggerRepeatableTaskCreation$.pipe(
-      concatMap(
-        () =>
-          this._taskRepeatCfgService
-            .getRepeatTableTasksDueForDayIncludingOverdue$(
-              Date.now() - this._dateService.startOfNextDayDiff,
-            )
-            .pipe(first()),
-        // ===> taskRepeatCfgs scheduled for today and not yet created already
-      ),
-      filter((taskRepeatCfgs) => taskRepeatCfgs && !!taskRepeatCfgs.length),
-      withLatestFrom(this._taskService.currentTaskId$),
-
-      // existing tasks with sub-tasks are loaded, because need to move them to the archive
-      mergeMap(([taskRepeatCfgs, currentTaskId]) => {
-        // NOTE sorting here is important
-        const sorted = taskRepeatCfgs.sort(sortRepeatableTaskCfgs);
-        return from(sorted).pipe(
-          mergeMap((taskRepeatCfg: TaskRepeatCfg) =>
-            this._taskRepeatCfgService.getActionsForTaskRepeatCfg(
-              taskRepeatCfg,
-              Date.now() - this._dateService.startOfNextDayDiff,
-            ),
-          ),
-          concatMap((actionsForRepeatCfg) => from(actionsForRepeatCfg)),
-        );
-      }),
-    ),
-  );
 
   removeConfigIdFromTaskStateTasks$: any = createEffect(() =>
     this._actions$.pipe(
@@ -288,7 +204,7 @@ export class TaskRepeatCfgEffects {
       if (task.reminderId) {
         this._taskService.reScheduleTask({
           task,
-          plannedAt: dateTime,
+          due: dateTime,
           remindCfg: completeCfg.remindAt,
           isMoveToBacklog: false,
         });
@@ -318,11 +234,5 @@ export class TaskRepeatCfgEffects {
         timeEstimate: changes.defaultEstimate,
       });
     }
-  }
-
-  private _saveToLs([action, taskRepeatCfgState]: [Action, TaskRepeatCfgState]): void {
-    this._pfapiService.m.taskRepeatCfg.save(taskRepeatCfgState, {
-      isUpdateRevAndLastUpdate: true,
-    });
   }
 }

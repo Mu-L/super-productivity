@@ -21,35 +21,14 @@
     class="quick-access"
     (keydown)="quickAccessKeydown($event)"
   >
-    <!--  <button-->
-    <!--    mat-icon-button-->
-    <!--    (click)="quickAccessBtnClick(01)"-->
-    <!--    [matTooltip]="'Schedule Today'"-->
-    <!--  >-->
-    <!--    <mat-icon>history</mat-icon>-->
-    <!--  </button>-->
-
-    @if (isShowRemoveFromToday()) {
-      <button
-        mat-icon-button
-        tabindex="0"
-        (click)="quickAccessBtnClick(0)"
-        [matTooltip]="T.F.TASK.D_SCHEDULE_TASK.QA_REMOVE_TODAY | translate"
-      >
-        <mat-icon svgIcon="remove_today"></mat-icon>
-      </button>
-    }
-    <!-- -->
-    @if (isShowAddToToday()) {
-      <button
-        mat-icon-button
-        tabindex="0"
-        (click)="quickAccessBtnClick(1)"
-        [matTooltip]="T.F.TASK.D_SCHEDULE_TASK.QA_TODAY | translate"
-      >
-        <mat-icon>wb_sunny</mat-icon>
-      </button>
-    }
+    <button
+      mat-icon-button
+      tabindex="0"
+      (click)="quickAccessBtnClick(1)"
+      [matTooltip]="T.F.TASK.D_SCHEDULE_TASK.QA_TODAY | translate"
+    >
+      <mat-icon>wb_sunny</mat-icon>
+    </button>
 
     <button
       mat-icon-button
@@ -79,7 +58,7 @@
       mat-icon-button
       tabindex="0"
       [matTooltip]="
-        (task.reminderId
+        (task.dueWithTime || task.dueDay
           ? (T.F.TASK.CMP.EDIT_SCHEDULED | translate)
           : (T.F.TASK.CMP.SCHEDULE | translate)) +
         (kb.taskSchedule ? ' [' + kb.taskSchedule + ']' : '')
@@ -88,6 +67,17 @@
     >
       <mat-icon>today</mat-icon>
     </button>
+
+    @if (task.dueWithTime || task.dueDay) {
+      <button
+        mat-icon-button
+        tabindex="0"
+        (click)="unscheduleTask()"
+        [matTooltip]="T.F.TASK.CMP.UNSCHEDULE_TASK | translate"
+      >
+        <mat-icon>event_busy</mat-icon>
+      </button>
+    }
   </div>
 
   @if (
@@ -163,11 +153,11 @@
     IS_TOUCH_PRIMARY &&
     !task.parentId &&
     !task.isDone &&
-    isTodayTag &&
-    (task.projectId || task.tagIds?.length > 1)
+    isOnTodayList() &&
+    (task.projectId || task.tagIds.length > 1)
   ) {
     <button
-      (click)="removeFromMyDay()"
+      (click)="unschedule()"
       mat-menu-item
     >
       <mat-icon svgIcon="remove_today"></mat-icon>
@@ -314,7 +304,7 @@
     <span class="key-i">{{ kb.taskEditTags }}</span>
   </button>
 
-  @if (!task.parentId && (moveToProjectList$ | async)?.length > 0) {
+  @if (!task.parentId && ((moveToProjectList$ | async)?.length || 0) > 0) {
     <button
       [matMenuTriggerFor]="projectMenu"
       mat-menu-item

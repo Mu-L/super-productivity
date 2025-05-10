@@ -16,21 +16,11 @@
     class="block-right bg-400"
   >
     <!--NOTE: non observable should be enough as we only need the initial value-->
-    @if (isTodayListActive()) {
-      @if (!t.repeatCfgId) {
-        <mat-icon>alarm</mat-icon>
-      }
-      @if (t.repeatCfgId) {
-        <mat-icon svgIcon="repeat"></mat-icon>
-      }
+    @if (!t.repeatCfgId) {
+      <mat-icon>today</mat-icon>
     }
-    @if (!isTodayListActive()) {
-      @if (!isTodayTag()) {
-        <mat-icon>wb_sunny</mat-icon>
-      }
-      @if (isTodayTag() && (t.projectId || t.tagIds?.length > 1)) {
-        <mat-icon svgIcon="remove_today"></mat-icon>
-      }
+    @if (t.repeatCfgId) {
+      <mat-icon svgIcon="repeat"></mat-icon>
     }
   </div>
 }
@@ -159,10 +149,12 @@
       >
         @if (!t.subTasks?.length) {
           <div class="time">
-            <div class="time-val">
-              <span [innerHTML]="t.timeSpent | msToString"></span>
-            </div>
-            <div class="separator">/</div>
+            @if (t.timeSpent) {
+              <div class="time-val">
+                <span [innerHTML]="t.timeSpent | msToString"></span>
+              </div>
+              <div class="separator">/</div>
+            }
             <div
               [innerHTML]="t.timeEstimate | msToString"
               class="time-val"
@@ -218,26 +210,47 @@
             (click)="scheduleTask()"
             [title]="T.F.TASK.CMP.EDIT_SCHEDULED | translate"
             class="ico-btn schedule-btn"
-            color=""
+            [color]="isOverdue() ? 'warn' : ''"
             mat-icon-button
           >
             <mat-icon>alarm</mat-icon>
             <div
               class="time-badge"
-              [innerHTML]="t.plannedAt | shortPlannedAt"
+              [innerHTML]="t.dueWithTime | shortPlannedAt"
             ></div>
           </button>
-        }
-        @if (((plannerService.plannedTaskDayMap$ | async) || {})[t.id]; as plannedAtDay) {
+        } @else if (t.dueWithTime) {
           <button
             (click)="scheduleTask()"
-            [title]="T.F.TASK.CMP.SCHEDULE | translate"
+            [title]="T.F.TASK.CMP.EDIT_SCHEDULED | translate"
             class="ico-btn schedule-btn"
-            color=""
+            [color]="isOverdue() ? 'warn' : ''"
             mat-icon-button
           >
-            <mat-icon>today</mat-icon>
-            <div class="time-badge">{{ plannedAtDay | localDateStr }}</div>
+            @if (isScheduledToday()) {
+              <mat-icon>wb_sunny</mat-icon>
+            } @else {
+              <mat-icon>schedule</mat-icon>
+            }
+            <div
+              class="time-badge"
+              [innerHTML]="t.dueWithTime | shortPlannedAt"
+            ></div>
+          </button>
+        } @else if (isShowDueDayBtn()) {
+          <button
+            (click)="scheduleTask()"
+            [title]="T.F.TASK.CMP.EDIT_SCHEDULED | translate"
+            class="ico-btn schedule-btn"
+            [color]="isOverdue() ? 'warn' : ''"
+            mat-icon-button
+          >
+            @if (isScheduledToday()) {
+              <mat-icon>wb_sunny</mat-icon>
+            } @else {
+              <mat-icon>today</mat-icon>
+            }
+            <div class="time-badge">{{ t.dueDay | localDateStr: todayStr() }}</div>
           </button>
         }
 
@@ -304,7 +317,7 @@
       }
       @if (t.subTasks?.length) {
         <task-list
-          [@expand]
+          [@expandInOnly]
           [isHideAll]="!!t._hideSubTasksMode"
           [isHideDone]="t._hideSubTasksMode === ShowSubTasksMode.HideDone"
           [isSubTaskList]="true"

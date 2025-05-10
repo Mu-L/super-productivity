@@ -999,7 +999,7 @@
         "REMINDER": "リマインダー",
         "REPEAT": "繰り返す",
         "SCHEDULE_TASK": "タスクのスケジュール",
-        "SCHEDULED_AT": "で予定されている。",
+        "DUE": "で予定されている。",
         "SUB_TASKS": "サブタスク（{{nr}}）",
         "TIME": "時間",
         "TITLE_PLACEHOLDER": "タイトルを入力"
@@ -1611,7 +1611,7 @@
     "PROJECT_SETTINGS": "プロジェクト設定",
     "PROJECTS": "プロジェクト",
     "QUICK_HISTORY": "クイックヒストリー",
-    "REPEAT_SCHEDULED": "リピート／予定",
+    "ALL_PLANNED_LIST": "リピート／予定",
     "SCHEDULE": "スケジュール",
     "SETTINGS": "設定",
     "SHOW_SEARCH_BAR": "検索バーを表示する",
@@ -1680,7 +1680,7 @@
     "NO_SCHEDULED_TITLE": "その日の予定タスク",
     "REPEATED_TASKS": "繰り返されるタスク",
     "SCHEDULED_TASKS": "スケジュールされたタスク",
-    "SCHEDULED_TASKS_WITH_REMINDER": "リマインダー付きスケジュールタスク",
+    "SCHEDULED_TASKS_WITH_TIME": "リマインダー付きスケジュールタスク",
     "START_TASK": "今すぐタスクを開始してリマインダーを削除"
   },
   "THEMES": {

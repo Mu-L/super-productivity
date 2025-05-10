@@ -1,8 +1,8 @@
 import { RootState } from '../root-state';
 import { actionLogger } from '../../util/action-logger';
-import { environment } from '../../../environments/environment';
 import { ActionReducer } from '@ngrx/store/src/models';
 import { IS_ELECTRON } from '../../app.constants';
+import { environment } from '../../../environments/environment';
 
 export const actionLoggerReducer = (
   reducer: ActionReducer<any, any>,

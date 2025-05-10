@@ -999,7 +999,7 @@
         "REMINDER": "Rappel",
         "REPEAT": "Répéter",
         "SCHEDULE_TASK": "Planifier une tâche",
-        "SCHEDULED_AT": "Planifié à",
+        "DUE": "Planifié à",
         "SUB_TASKS": "Sous-tâches ({{nr}})",
         "TIME": "Temps",
         "TITLE_PLACEHOLDER": "Entrez un titre"
@@ -1611,7 +1611,7 @@
     "PROJECT_SETTINGS": "paramètres du projet",
     "PROJECTS": "Projets",
     "QUICK_HISTORY": "Historique rapide",
-    "REPEAT_SCHEDULED": "Répété / Programmé",
+    "ALL_PLANNED_LIST": "Répété / Programmé",
     "SCHEDULE": "Programmer",
     "SETTINGS": "Réglages",
     "SHOW_SEARCH_BAR": "Afficher la barre de recherche",
@@ -1680,7 +1680,7 @@
     "NO_SCHEDULED_TITLE": "Planifier les tâches du jour",
     "REPEATED_TASKS": "Tâches répétées",
     "SCHEDULED_TASKS": "Tâches programmées",
-    "SCHEDULED_TASKS_WITH_REMINDER": "Planifier les tâches avec rappel",
+    "SCHEDULED_TASKS_WITH_TIME": "Planifier les tâches avec rappel",
     "START_TASK": "Démarrer la tâche maintenant et supprimer le rappel"
   },
   "THEMES": {

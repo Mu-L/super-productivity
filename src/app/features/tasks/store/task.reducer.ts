@@ -1,5 +1,6 @@
 import {
   __updateMultipleTaskSimple,
+  addReminderIdToTask,
   addSubTask,
   addTask,
   convertToMainTask,
@@ -12,12 +13,13 @@ import {
   moveSubTaskUp,
   moveToArchive_,
   moveToOtherProject,
+  removeReminderFromTask,
   removeTagsForAllTasks,
   removeTimeSpent,
-  reScheduleTask,
+  reScheduleTaskWithTime,
   restoreTask,
   roundTimeSpentForDay,
-  scheduleTask,
+  scheduleTaskWithTime,
   setCurrentTask,
   setSelectedTask,
   toggleStart,
@@ -68,6 +70,7 @@ import { TODAY_TAG } from '../../tag/tag.const';
 import { getWorklogStr } from '../../../util/get-work-log-str';
 import { deleteProject } from '../../project/store/project.actions';
 import { TimeTrackingActions } from '../../time-tracking/store/time-tracking.actions';
+import { planTasksForToday, removeTasksFromTodayTag } from '../../tag/store/tag.actions';
 
 export const TASK_FEATURE_NAME = 'tasks';
 
@@ -222,6 +225,9 @@ export const taskReducer = createReducer<TaskState>(
   }),
 
   on(updateTaskTags, (state, { task, newTagIds }) => {
+    if (newTagIds.includes(TODAY_TAG.id)) {
+      throw new Error('We dont do this anymore!');
+    }
     return taskAdapter.updateOne(
       {
         id: task.id,
@@ -231,6 +237,14 @@ export const taskReducer = createReducer<TaskState>(
       },
       state,
     );
+  }),
+
+  on(removeTasksFromTodayTag, (state, { taskIds }) => {
+    return {
+      ...state,
+      // we do this to maintain the order of tasks when they are moved to overdue
+      ids: [...taskIds, ...state.ids.filter((id) => !taskIds.includes(id))],
+    };
   }),
 
   on(removeTagsForAllTasks, (state, { tagIdsToRemove }) => {
@@ -423,7 +437,6 @@ export const taskReducer = createReducer<TaskState>(
     const stateCopy = taskAdapter.addOne(
       {
         ...task,
-        parentId,
         // update timeSpent if first sub task and non present
         ...(parentTask.subTaskIds.length === 0 &&
         Object.keys(task.timeSpentOnDay).length === 0
@@ -436,6 +449,7 @@ export const taskReducer = createReducer<TaskState>(
         ...(parentTask.subTaskIds.length === 0 && !task.timeEstimate
           ? { timeEstimate: parentTask.timeEstimate }
           : {}),
+        parentId,
         // should always be empty
         tagIds: [],
         // should always be the one of the parent
@@ -459,7 +473,7 @@ export const taskReducer = createReducer<TaskState>(
     };
   }),
 
-  on(convertToMainTask, (state, { task }) => {
+  on(convertToMainTask, (state, { task, isPlanForToday }) => {
     const par = state.entities[task.parentId as string];
     if (!par) {
       throw new Error('No parent for sub task');
@@ -472,6 +486,7 @@ export const taskReducer = createReducer<TaskState>(
         changes: {
           parentId: undefined,
           tagIds: [...par.tagIds],
+          ...(isPlanForToday ? { dueDay: getWorklogStr() } : {}),
         },
       },
       stateCopy,
@@ -630,34 +645,16 @@ export const taskReducer = createReducer<TaskState>(
   on(
     PlannerActions.transferTask,
     (state, { task, today, targetIndex, newDay, prevDay }) => {
-      if (prevDay === today && newDay !== today) {
-        const taskToUpdate = state.entities[task.id] as Task;
-        return taskAdapter.updateOne(
-          {
-            id: task.id,
-            changes: {
-              tagIds: taskToUpdate.tagIds.filter((id) => id !== TODAY_TAG.id),
-            },
+      return taskAdapter.updateOne(
+        {
+          id: task.id,
+          changes: {
+            dueDay: getWorklogStr(newDay),
+            dueWithTime: undefined,
           },
-          state,
-        );
-      }
-      if (prevDay !== today && newDay === today) {
-        const taskToUpdate = state.entities[task.id] as Task;
-        const tagIds = [...taskToUpdate.tagIds];
-        tagIds.unshift(TODAY_TAG.id);
-        return taskAdapter.updateOne(
-          {
-            id: task.id,
-            changes: {
-              tagIds,
-            },
-          },
-          state,
-        );
-      }
-
-      return state;
+        },
+        state,
+      );
     },
   ),
   on(PlannerActions.moveBeforeTask, (state, { toTaskId, fromTask }) => {
@@ -666,83 +663,75 @@ export const taskReducer = createReducer<TaskState>(
       return state;
     }
 
-    if (
-      targetTask.tagIds.includes(TODAY_TAG.id) &&
-      !fromTask.tagIds.includes(TODAY_TAG.id)
-    ) {
-      return taskAdapter.updateOne(
-        {
-          id: fromTask.id,
-          changes: {
-            tagIds: unique([TODAY_TAG.id, ...fromTask.tagIds]),
-          },
-        },
-        state,
-      );
-    } else if (
-      !targetTask.tagIds.includes(TODAY_TAG.id) &&
-      fromTask.tagIds.includes(TODAY_TAG.id)
-    ) {
-      return taskAdapter.updateOne(
-        {
-          id: fromTask.id,
-          changes: {
-            tagIds: unique(fromTask.tagIds.filter((id) => id !== TODAY_TAG.id)),
-          },
-        },
-        state,
-      );
-    }
-    return state;
-  }),
-
-  on(PlannerActions.planTaskForDay, (state, { task, day }) => {
-    const todayStr = getWorklogStr();
-    if (day === todayStr && !task.tagIds.includes(TODAY_TAG.id)) {
-      return taskAdapter.updateOne(
-        {
-          id: task.id,
-          changes: {
-            tagIds: unique([TODAY_TAG.id, ...task.tagIds]),
-          },
-        },
-        state,
-      );
-    } else if (day !== todayStr && task.tagIds.includes(TODAY_TAG.id)) {
-      return taskAdapter.updateOne(
-        {
-          id: task.id,
-          changes: {
-            tagIds: task.tagIds.filter((id) => id !== TODAY_TAG.id),
-          },
-        },
-        state,
-      );
-    }
-
-    return state;
-  }),
-
-  // REMINDER STUFF
-  // --------------
-  on(scheduleTask, (state, { task, plannedAt }) => {
     return taskAdapter.updateOne(
       {
-        id: task.id,
+        id: fromTask.id,
         changes: {
-          plannedAt,
+          dueDay: getWorklogStr(targetTask.dueDay),
+          dueWithTime: undefined,
         },
       },
       state,
     );
   }),
 
-  on(reScheduleTask, (state, { task, plannedAt }) => {
+  on(PlannerActions.planTaskForDay, (state, { task, day }) => {
     return taskAdapter.updateOne(
       {
         id: task.id,
         changes: {
-          plannedAt,
+          dueDay: day,
+          dueWithTime: undefined,
+        },
+      },
+      state,
+    );
+  }),
+
+  on(planTasksForToday, (state, { taskIds }) => {
+    const today = getWorklogStr();
+    const updates: Update<Task>[] = taskIds.map((taskId) => ({
+      id: taskId,
+      changes: {
+        dueDay: today,
+      },
+    }));
+    return taskAdapter.updateMany(updates, state);
+  }),
+
+  // REMINDER STUFF
+  // --------------
+  on(addReminderIdToTask, (state, { taskId, reminderId }) => {
+    return taskAdapter.updateOne(
+      {
+        id: taskId,
+        changes: {
+          reminderId,
+        },
+      },
+      state,
+    );
+  }),
+  on(scheduleTaskWithTime, (state, { task, dueWithTime }) => {
+    return taskAdapter.updateOne(
+      {
+        id: task.id,
+        changes: {
+          dueWithTime,
+          dueDay: undefined,
+        },
+      },
+      state,
+    );
+  }),
+
+  on(reScheduleTaskWithTime, (state, { task, dueWithTime }) => {
+    return taskAdapter.updateOne(
+      {
+        id: task.id,
+        changes: {
+          dueWithTime,
+          dueDay: undefined,
         },
       },
       state,
@@ -754,7 +743,25 @@ export const taskReducer = createReducer<TaskState>(
       {
         id,
         changes: {
-          plannedAt: undefined,
+          dueDay: undefined,
+          dueWithTime: undefined,
+        },
+      },
+      state,
+    );
+  }),
+
+  on(removeReminderFromTask, (state, { id, isLeaveDueTime }) => {
+    return taskAdapter.updateOne(
+      {
+        id,
+        changes: {
+          reminderId: undefined,
+          ...(isLeaveDueTime
+            ? {}
+            : {
+                dueWithTime: undefined,
+              }),
         },
       },
       state,

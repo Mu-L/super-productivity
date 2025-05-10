@@ -24,8 +24,7 @@ import { PlannerActions } from '../store/planner.actions';
 import { getWorklogStr } from '../../../util/get-work-log-str';
 import { DatePipe } from '@angular/common';
 import { SnackService } from '../../../core/snack/snack.service';
-import { updateTaskTags } from '../../tasks/store/task.actions';
-import { TODAY_TAG } from '../../tag/tag.const';
+import { removeReminderFromTask, unScheduleTask } from '../../tasks/store/task.actions';
 import { truncate } from '../../../util/truncate';
 import { TASK_REMINDER_OPTIONS } from './task-reminder-options.const';
 import { FormsModule } from '@angular/forms';
@@ -36,13 +35,9 @@ import { isToday } from '../../../util/is-today.util';
 import { TaskService } from '../../tasks/task.service';
 import { ReminderService } from '../../reminder/reminder.service';
 import { getDateTimeFromClockString } from '../../../util/get-date-time-from-clock-string';
-import { PlannerService } from '../planner.service';
-import { first } from 'rxjs/operators';
 import { fadeAnimation } from '../../../ui/animations/fade.ani';
 import { dateStrToUtcDate } from '../../../util/date-str-to-utc-date';
 import { DateAdapter, MatOption } from '@angular/material/core';
-import { isShowAddToToday, isShowRemoveFromToday } from '../../tasks/util/is-task-today';
-import { WorkContextService } from '../../work-context/work-context.service';
 import { MatTooltip } from '@angular/material/tooltip';
 import { MatButton, MatIconButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
@@ -53,8 +48,10 @@ import {
   MatSuffix,
 } from '@angular/material/form-field';
 import { MatSelect } from '@angular/material/select';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { MatInput } from '@angular/material/input';
+
+const DEFAULT_TIME = '09:00';
 
 @Component({
   selector: 'dialog-schedule-task',
@@ -91,9 +88,8 @@ export class DialogScheduleTaskComponent implements AfterViewInit {
   private _snackService = inject(SnackService);
   private _datePipe = inject(DatePipe);
   private _taskService = inject(TaskService);
-  private workContextService = inject(WorkContextService);
   private _reminderService = inject(ReminderService);
-  private _plannerService = inject(PlannerService);
+  private _translateService = inject(TranslateService);
   private readonly _dateAdapter = inject<DateAdapter<unknown>>(DateAdapter);
 
   T: typeof T = T;
@@ -119,37 +115,38 @@ export class DialogScheduleTaskComponent implements AfterViewInit {
   async ngAfterViewInit(): Promise<void> {
     if (this.data.task.reminderId) {
       const reminder = this._reminderService.getById(this.data.task.reminderId);
-      if (reminder) {
+      if (reminder && this.data.task.dueWithTime) {
         this.selectedReminderCfgId = millisecondsDiffToRemindOption(
-          this.data.task.plannedAt as number,
+          this.data.task.dueWithTime,
           reminder.remindAt,
         );
       } else {
         console.warn('No reminder found for task', this.data.task);
       }
-    } else {
+      // for tasks without anything scheduled
+    } else if (!this.data.task.dueWithTime) {
       this.selectedReminderCfgId = TaskReminderOptionId.AtStart;
+    } else {
+      this.selectedReminderCfgId = TaskReminderOptionId.DoNotRemind;
     }
 
-    if (this.data.task.plannedAt) {
+    if (this.data.task.dueWithTime) {
       const tzOffset = new Date().getTimezoneOffset() * 60 * 1000;
-      this.selectedDate = new Date(this.data.task.plannedAt + tzOffset);
-      this.selectedTime = new Date(this.data.task.plannedAt).toLocaleTimeString('en-GB', {
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      });
+      this.selectedDate = new Date(this.data.task.dueWithTime + tzOffset);
+      this.selectedTime = new Date(this.data.task.dueWithTime).toLocaleTimeString(
+        'en-GB',
+        {
+          hour: '2-digit',
+          minute: '2-digit',
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        },
+      );
     } else {
-      const plannerTaskMap = await this._plannerService.plannedTaskDayMap$
-        .pipe(first())
-        .toPromise();
-      this.plannedDayForTask = plannerTaskMap[this.data.task.id];
+      this.plannedDayForTask = this.data.task.dueDay || null;
 
       this.selectedDate = this.plannedDayForTask
         ? dateStrToUtcDate(this.plannedDayForTask)
-        : this.data.task.tagIds.includes(TODAY_TAG.id)
-          ? new Date()
-          : null;
+        : null;
     }
 
     if (this.data.targetDay) {
@@ -209,17 +206,6 @@ export class DialogScheduleTaskComponent implements AfterViewInit {
     }
   }
 
-  addToToday(): void {
-    this._taskService.addTodayTag(this.data.task);
-  }
-
-  removeFromToday(): void {
-    this._taskService.updateTags(
-      this.data.task,
-      this.data.task.tagIds.filter((tid) => tid !== TODAY_TAG.id),
-    );
-  }
-
   onTimeKeyDown(ev: KeyboardEvent): void {
     // console.log('ev.key!', ev.key);
     if (ev.key === 'Enter') {
@@ -248,19 +234,24 @@ export class DialogScheduleTaskComponent implements AfterViewInit {
   }
 
   remove(): void {
+    // TODO simplify
     if (this.data.task.reminderId) {
-      this._taskService.unScheduleTask(this.data.task.id, this.data.task.reminderId);
+      this._store.dispatch(
+        unScheduleTask({
+          id: this.data.task.id,
+          reminderId: this.data.task.reminderId,
+        }),
+      );
     } else if (this.plannedDayForTask === getWorklogStr()) {
       // to cover edge cases
       this._store.dispatch(
-        PlannerActions.removeTaskFromDays({ taskId: this.data.task.id }),
-      );
-      this._store.dispatch(
-        updateTaskTags({
-          task: this.data.task,
-          newTagIds: this.data.task.tagIds.filter((id) => id !== TODAY_TAG.id),
+        unScheduleTask({
+          id: this.data.task.id,
+          reminderId: this.data.task.reminderId,
+          isSkipToast: true,
         }),
       );
+
       this._snackService.open({
         type: 'SUCCESS',
         msg: T.F.PLANNER.S.REMOVED_PLAN_DATE,
@@ -268,8 +259,13 @@ export class DialogScheduleTaskComponent implements AfterViewInit {
       });
     } else {
       this._store.dispatch(
-        PlannerActions.removeTaskFromDays({ taskId: this.data.task.id }),
+        unScheduleTask({
+          id: this.data.task.id,
+          reminderId: this.data.task.reminderId,
+          isSkipToast: true,
+        }),
       );
+
       this._snackService.open({
         type: 'SUCCESS',
         msg: T.F.PLANNER.S.REMOVED_PLAN_DATE,
@@ -294,7 +290,7 @@ export class DialogScheduleTaskComponent implements AfterViewInit {
         if (isToday(this.selectedDate as Date)) {
           this.selectedTime = getClockStringFromHours(new Date().getHours() + 1);
         } else {
-          this.selectedTime = '09:00';
+          this.selectedTime = DEFAULT_TIME;
         }
       } else {
         // get current time +1h
@@ -304,7 +300,7 @@ export class DialogScheduleTaskComponent implements AfterViewInit {
     }
   }
 
-  async submit(isRemoveFromToday = false): Promise<void> {
+  async submit(): Promise<void> {
     if (!this.selectedDate) {
       console.warn('no selected date');
       return;
@@ -312,72 +308,72 @@ export class DialogScheduleTaskComponent implements AfterViewInit {
 
     const newDayDate = new Date(this.selectedDate);
     const newDay = getWorklogStr(newDayDate);
-    const formattedDate = this._datePipe.transform(newDay, 'shortDate') as string;
 
-    if (isRemoveFromToday) {
-      this.removeFromToday();
-    } else if (this.selectedTime) {
-      const task = this.data.task;
-      const newDate = new Date(
-        getDateTimeFromClockString(this.selectedTime, this.selectedDate as Date),
-      );
+    this._handleReminderRemoval();
 
-      const isTodayI = isToday(newDate);
-      this._taskService.scheduleTask(
-        task,
-        newDate.getTime(),
-        this.selectedReminderCfgId,
-        false,
-      );
-      if (isTodayI) {
-        this.addToToday();
-      }
-    } else if (newDay === getWorklogStr()) {
-      if (this.isShowAddToToday()) {
-        this.addToToday();
-
-        this._snackService.open({
-          type: 'SUCCESS',
-          msg: T.F.PLANNER.S.TASK_PLANNED_FOR,
-          translateParams: {
-            date: formattedDate,
-            extra: await this._plannerService.getSnackExtraStr(newDay),
-          },
-        });
-      } else if (this.data.task.plannedAt && !this.selectedTime) {
-        // time was removed for today task case
-        this._taskService.unScheduleTask(this.data.task.id, this.data.task.reminderId);
-        this._snackService.open({
-          type: 'SUCCESS',
-          msg: T.F.PLANNER.S.TASK_PLANNED_FOR,
-          translateParams: {
-            date: formattedDate,
-            extra: await this._plannerService.getSnackExtraStr(newDay),
-          },
-        });
-      } else {
-        this._snackService.open({
-          type: 'CUSTOM',
-          ico: 'info',
-          msg: T.F.PLANNER.S.TASK_ALREADY_PLANNED,
-          translateParams: { date: formattedDate },
-        });
-      }
-    } else {
-      this._store.dispatch(
-        PlannerActions.planTaskForDay({ task: this.data.task, day: newDay }),
-      );
+    if (this.selectedTime) {
+      this._scheduleWithTime();
+    } else if (this.data.task.dueDay === newDay) {
+      const formattedDate =
+        newDay == getWorklogStr()
+          ? this._translateService.instant(T.G.TODAY_TAG_TITLE)
+          : (this._datePipe.transform(newDay, 'shortDate') as string);
       this._snackService.open({
-        type: 'SUCCESS',
-        msg: T.F.PLANNER.S.TASK_PLANNED_FOR,
-        translateParams: {
-          date: formattedDate,
-          extra: await this._plannerService.getSnackExtraStr(newDay),
-        },
+        type: 'CUSTOM',
+        ico: 'info',
+        msg: T.F.PLANNER.S.TASK_ALREADY_PLANNED,
+        translateParams: { date: formattedDate },
       });
+    } else {
+      await this._planForDay(newDay);
     }
 
     this.close(true);
+  }
+
+  private _handleReminderRemoval(): void {
+    if (
+      this.selectedReminderCfgId === TaskReminderOptionId.DoNotRemind &&
+      typeof this.data.task.reminderId === 'string'
+    ) {
+      this._store.dispatch(
+        removeReminderFromTask({
+          id: this.data.task.id,
+          reminderId: this.data.task.reminderId,
+          isSkipToast: true,
+          isLeaveDueTime: true,
+        }),
+      );
+    }
+  }
+
+  private _scheduleWithTime(): void {
+    const task = this.data.task;
+    const newDate = new Date(
+      getDateTimeFromClockString(this.selectedTime as string, this.selectedDate as Date),
+    );
+
+    this._taskService.scheduleTask(
+      task,
+      newDate.getTime(),
+      this.selectedReminderCfgId,
+      false,
+    );
+    // TODO if we want this, we should add it as an effect
+    // const isTodayI = isToday(newDate);
+    // if (isTodayI) {
+    //   this.addToToday();
+    // }
+  }
+
+  private async _planForDay(newDay: string): Promise<void> {
+    this._store.dispatch(
+      PlannerActions.planTaskForDay({
+        task: this.data.task,
+        day: newDay,
+        isShowSnack: true,
+      }),
+    );
   }
 
   quickAccessBtnClick(item: number): void {
@@ -385,8 +381,6 @@ export class DialogScheduleTaskComponent implements AfterViewInit {
     tDate.setMinutes(0, 0, 0);
 
     switch (item) {
-      case 0:
-        break;
       case 1:
         this.selectedDate = tDate;
         break;
@@ -412,15 +406,6 @@ export class DialogScheduleTaskComponent implements AfterViewInit {
         break;
     }
 
-    const isRemoveFromToday = item === 0 && this.isShowRemoveFromToday();
-    this.submit(isRemoveFromToday);
-  }
-
-  isShowRemoveFromToday(): boolean {
-    return isShowRemoveFromToday(this.task);
-  }
-
-  isShowAddToToday(): boolean {
-    return isShowAddToToday(this.task, this.workContextService.isToday);
+    this.submit();
   }
 }

@@ -8,6 +8,7 @@ import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { SnackService } from '../../core/snack/snack.service';
 import {
   AuthFailSPError,
+  CanNotMigrateDownError,
   DecryptError,
   DecryptNoPasswordError,
   LockPresentError,
@@ -47,7 +48,7 @@ export class SyncWrapperService {
   );
   syncProviderId$: Observable<SyncProviderId | null> = this.syncCfg$.pipe(
     // NOTE: types are compatible
-    map((cfg) => cfg.syncProvider as SyncProviderId | null),
+    map((cfg) => cfg.syncProvider as unknown as SyncProviderId | null),
   );
 
   syncInterval$: Observable<number> = this.syncCfg$.pipe(map((cfg) => cfg.syncInterval));
@@ -140,6 +141,8 @@ export class SyncWrapperService {
         this._matDialog
           .open(DialogIncompleteSyncComponent, {
             data: { modelId },
+            disableClose: true,
+            autoFocus: false,
           })
           .afterClosed()
           .subscribe((res) => {
@@ -163,9 +166,11 @@ export class SyncWrapperService {
       ) {
         this._handleDecryptionError();
         return 'HANDLED_ERROR';
+      } else if (error instanceof CanNotMigrateDownError) {
+        alert(this._translateService.instant(T.F.SYNC.A.REMOTE_MODEL_VERSION_NEWER));
+        return 'HANDLED_ERROR';
       } else {
         const errStr = getSyncErrorStr(error);
-        alert('IMEXSyncService ERR: ' + errStr);
         this._snackService.open({
           // msg: T.F.SYNC.S.UNKNOWN_ERROR,
           msg: errStr,
@@ -251,7 +256,10 @@ export class SyncWrapperService {
 
   private _handleDecryptionError(): void {
     this._matDialog
-      .open(DialogHandleDecryptErrorComponent)
+      .open(DialogHandleDecryptErrorComponent, {
+        disableClose: true,
+        autoFocus: false,
+      })
       .afterClosed()
       .subscribe(({ isReSync, isForceUpload }) => {
         if (isReSync) {
@@ -291,6 +299,7 @@ export class SyncWrapperService {
     }
     this.lastConflictDialog = this._matDialog.open(DialogSyncConflictComponent, {
       restoreFocus: true,
+      autoFocus: false,
       disableClose: true,
       data: {
         remote,

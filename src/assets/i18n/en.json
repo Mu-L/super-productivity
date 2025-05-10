@@ -163,6 +163,12 @@
         "UNABLE_TO_GENERATE_PKCE_CHALLENGE": "Dropbox: Unable to generate PKCE challenge."
       }
     },
+    "D_RATE": {
+      "A_HOW": "How and where to rate",
+      "BTN_DONT_BOTHER": "Don't bother me again",
+      "TITLE": "\uD83D\uDE48 Please forgive us, but...",
+      "TXT": "You would help the project immensely by <strong>giving it a good rating, if you like it!</strong>"
+    },
     "FINISH_DAY_BEFORE_EXIT": {
       "C": {
         "FINISH_DAY_BEFORE_EXIT": "There are {{nr}} done tasks in your today list not yet moved to the archive. Do you really want to quit without finishing your day?"
@@ -620,11 +626,6 @@
           "ADD_TO_TODAY": "Add to Today",
           "RE_PLAN_ALL": "Reschedule all",
           "TITLE": "Add planned tasks to Today"
-        },
-        "PLAN_FOR_DAY": {
-          "REMINDER_WARNING": "This will remove the reminder from the task! Press Escape to cancel.",
-          "REMOVE_PLAN_DATE": "Remove plan date",
-          "TITLE": "Plan Task for Day"
         }
       },
       "EDIT_REPEATED_TASK": "Edit repeated task '{{taskName}}'",
@@ -854,6 +855,7 @@
     "SYNC": {
       "A": {
         "ARCHIVE_ONLY_UPLOADED": "Your data was only partially uploaded. Please try again later! Otherwise you will not be able to sync your data to other devices.",
+        "REMOTE_MODEL_VERSION_NEWER": "The remote model version is newer than the local one. Please update your local app to the newest version!",
         "POSSIBLE_LEGACY_DATA": "Super Productivity has improved syncing by now using two separate files rather than a single one, allowing for much less data transfer. It is recommended to update all instances of Super Productivity and to first sync data from the app instance where the data is newest. If this is the data from your local device then please ignore this warning and just proceed to upload it by confirming the next dialog."
       },
       "C": {
@@ -1012,7 +1014,7 @@
         "REMINDER": "Reminder",
         "REPEAT": "Repeat",
         "SCHEDULE_TASK": "Schedule Task",
-        "SCHEDULED_AT": "Scheduled at",
+        "DUE": "Due",
         "SUB_TASKS": "Sub Tasks ({{nr}})",
         "TIME": "Time",
         "TITLE_PLACEHOLDER": "Enter a title"
@@ -1053,6 +1055,7 @@
         "TOGGLE_TAGS": "Toggle Tags",
         "TRACK_TIME": "Start tracking time",
         "TRACK_TIME_STOP": "Pause tracking time",
+        "UNSCHEDULE_TASK": "Unschedule task",
         "UPDATE_ISSUE_DATA": "Update issue data"
       },
       "D_CONFIRM_SHORT_SYNTAX_NEW_TAG": {
@@ -1066,11 +1069,11 @@
       "D_REMINDER_VIEW": {
         "ADD_ALL_TO_TODAY": "Add all to today",
         "ADD_TO_TODAY": "Add to today",
-        "DISMISS": "Dismiss Reminder",
-        "DISMISS_ALL": "Dismiss all",
+        "UNSCHEDULE": "Unschedule",
+        "UNSCHEDULE_ALL": "Unschedule all",
         "DONE": "Done",
-        "DUE_TASK": "Due task",
-        "DUE_TASKS": "Due tasks",
+        "DUE_TASK": "Reminder for due task",
+        "DUE_TASKS": "Reminder for due tasks",
         "FOR_CURRENT": "Task is due. Do you want to start working on it?",
         "FOR_OTHER": "Task is due. Do you want to start working on it?",
         "FROM_PROJECT": "From Project: \"{{title}}\"",
@@ -1128,9 +1131,10 @@
         "FOUND_MOVE_FROM_OTHER_LIST": "Added task <strong>{{title}}</strong> from <strong>{{contextTitle}}</strong> to current list",
         "FOUND_RESTORE_FROM_ARCHIVE": "Restored task <strong>{{title}}</strong> related to issue from archive",
         "LAST_TAG_DELETION_WARNING": "You're trying to remove the last tag of a non project task. This is not allowed!",
+        "MOVED_TO_ARCHIVE": "Moved {{nr}} tasks to archive",
         "MOVED_TO_PROJECT": "Moved task \"{{taskTitle}}\" to project \"{{projectTitle}}\"",
         "MOVED_TO_PROJECT_ACTION": "Go to Project",
-        "REMINDER_ADDED": "Scheduled task \"{{title}}\"",
+        "REMINDER_ADDED": "Scheduled <strong>{{title}}</strong> at <strong>{{date}}</strong>",
         "REMINDER_DELETED": "Deleted reminder for task",
         "REMINDER_UPDATED": "Updated reminder for task \"{{title}}\"",
         "TASK_CREATED": "Created task \"{{title}}\""
@@ -1319,6 +1323,7 @@
     "EXPORT_DATA": "Export Data",
     "IMPORT_FROM_FILE": "Import from file",
     "PRIVACY_EXPORT": "Export anonymized data (to send to contact@super-productivity.com for debugging)",
+    "S_BACKUP_DOWNLOADED": "Backup downloaded to android documents folder",
     "S_ERR_IMPORT_FAILED": "Importing data failed",
     "S_ERR_INVALID_DATA": "Import failed: Invalid JSON"
   },
@@ -1337,6 +1342,7 @@
     "EXTENSION_INFO": "Please <a target=\"_blank\" href=\"https://chrome.google.com/webstore/detail/super-productivity/ljkbjodfmekklcoibdnhahlaalhihmlb\"> download the chrome extension</a> in order to allow communication with the Jira Api and Idle Time Handling. Note that this doesn't work for mobile. <strong>Without the extension the features will not work!!</strong>",
     "HIDE": "Hide",
     "ICON_INP_DESCRIPTION": "All utf-8 emojis are also supported!",
+    "INBOX_TAG_TITLE": "Inbox",
     "LOGIN": "Login",
     "LOGOUT": "Logout",
     "MINUTES": "{{m}} minutes",
@@ -1346,6 +1352,7 @@
     "NO_CON": "You are currently offline. Please reconnect to the internet.",
     "NONE": "None",
     "OK": "Ok",
+    "OVERDUE": "Overdue",
     "PREVIOUS": "Previous",
     "REMOVE": "Remove",
     "RESET": "Reset",
@@ -1618,6 +1625,7 @@
       "SYNC": "Howto: Configure Sync"
     },
     "METRICS": "Metrics",
+    "NO_PROJECT_INFO": "No projects available. You can create a new project by clicking the \"Create Project\" button.",
     "NO_TAG_INFO": "There are currently no tags. You can add tags by entering `#yourTagName` when adding or editing tasks.",
     "NOTES": "Notes",
     "NOTES_PANEL_INFO": "Notes can only be shown from the schedule and the regular task list views.",
@@ -1627,7 +1635,7 @@
     "PROJECT_SETTINGS": "Project Settings",
     "PROJECTS": "Projects",
     "QUICK_HISTORY": "Quick History",
-    "REPEAT_SCHEDULED": "Repeat/Scheduled",
+    "ALL_PLANNED_LIST": "Due / Repeat",
     "SCHEDULE": "Schedule",
     "SETTINGS": "Settings",
     "SHOW_SEARCH_BAR": "Show Search Bar",
@@ -1650,6 +1658,7 @@
   },
 
   "PDS": {
+    "ADD_TASKS_FROM_TODAY": "Add tasks from today",
     "BACK": "Wait I forgot something!",
     "BREAK_LABEL": "Breaks (nr / time)",
     "CELEBRATE": "Take a moment to <i>celebrate!</i>",
@@ -1702,9 +1711,9 @@
     "NO_REPEATABLE_TASKS": "There are currently no repeated tasks. You can schedule a task by choosing \"Repeat Task\" in the task side panel. To open it click on the most right icon that appears when hovering a task (or just tap on the task on mobile).",
     "NO_SCHEDULED": "There are currently no scheduled tasks. You can schedule a task by choosing \"Schedule Task\" in the task context menu. To open it right click (long press on mobile) on a task.",
     "NO_SCHEDULED_TITLE": "Scheduled Tasks for Day",
-    "REPEATED_TASKS": "Repeated tasks",
+    "REPEATED_TASKS": "Repeated Tasks",
     "SCHEDULED_TASKS": "Scheduled tasks",
-    "SCHEDULED_TASKS_WITH_REMINDER": "Scheduled tasks with reminder",
+    "SCHEDULED_TASKS_WITH_TIME": "Scheduled Tasks with Start Time",
     "START_TASK": "Start task and remove reminder"
   },
   "THEMES": {
@@ -1738,18 +1747,18 @@
   },
   "WW": {
     "ADD_MORE": "Add more",
-    "ADD_SCHEDULED_FOR_TODAY": "Add tasks planned for today ({{nr}})",
     "ADD_SCHEDULED_FOR_TOMORROW": "Add tasks planned for tomorrow ({{nr}})",
     "ADD_SOME_TASKS": "Add some tasks to plan your day!",
-    "COMPLETED_TASKS": "Completed Tasks",
+    "DONE_TASKS": "Done Tasks",
     "ESTIMATE_REMAINING": "Estimate remaining:",
     "FINISH_DAY": "Finish Day",
     "FINISH_DAY_FOR_PROJECT": "Finish Day for this Project",
     "FINISH_DAY_FOR_TAG": "Finish Day for this Tag",
     "FINISH_DAY_TOOLTIP": "Evaluate your day, move all done tasks to the archive (optionally) and/or plan your next day.",
     "HELP_PROCRASTINATION": "Help I'm procrastinating!",
-    "NO_COMPLETED_TASKS": "There are currently no completed tasks",
-    "NO_PLANNED_TASKS": "No planned tasks",
+    "MOVE_DONE_TO_ARCHIVE": "Move done to archive",
+    "NO_DONE_TASKS": "There are currently no done tasks",
+    "NO_PLANNED_TASKS": "no tasks planned",
     "READY_TO_WORK": "Ready to work!",
     "RESET_BREAK_TIMER": "Reset without break timer",
     "TIME_ESTIMATED": "Time Estimated:",

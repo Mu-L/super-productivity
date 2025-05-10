@@ -16,7 +16,7 @@ type TagChanges = {
 };
 type DueChanges = {
   title?: string;
-  plannedAt?: number;
+  dueWithTime?: number;
 };
 
 const SHORT_SYNTAX_TIME_REG_EX =
@@ -29,6 +29,43 @@ const CH_DUE = '@';
 const ALL_SPECIAL = `(\\${CH_PRO}|\\${CH_TAG}|\\${CH_DUE})`;
 
 const customDateParser = casual.clone();
+customDateParser.refiners.push({
+  refine: (context, results) => {
+    results.forEach((result) => {
+      const { refDate, text, start } = result;
+      const regex = / [5-9][0-9]$/;
+      const yearIndex = text.search(regex);
+      // The year pattern in Chrono's source code is (?:[1-9][0-9]{0,3}\\s{0,2}(?:BE|AD|BC|BCE|CE)|[1-2][0-9]{3}|[5-9][0-9]|2[0-5]).
+      // This means any two-digit numeric value from 50 to 99 will be considered a year.
+      // Link: https://github.com/wanasit/chrono/blob/54e7ff12f9185e735ee860c25922b2ab2367d40b/src/locales/en/constants.ts#L234C30-L234C108
+      // When someone creates a task like "Test @25/4 90m", Chrono will return the year as 1990, which is an undesirable behaviour in most cases.
+      if (yearIndex !== -1) {
+        result.text = text.slice(0, yearIndex);
+        const current = new Date();
+        let year = current.getFullYear();
+        // If the parsed month is smaller than the current month,
+        // it means the time is for next year. For example, parsed month is March
+        // and it is currently April
+        const impliedDate = start.get('day');
+        const impliedMonth = start.get('month');
+        // Due to the future-forward nature of the date parser, there are two scenarios that the implied year is next year:
+        // - Implied month is smaller than current month i.e. 20/3 vs 2/4
+        // - Same month but the implied date is before the current date i.e. 14/4 vs 20/4
+        if (
+          (impliedMonth && impliedMonth < refDate.getMonth() + 1) ||
+          (impliedMonth === refDate.getMonth() + 1 &&
+            impliedDate &&
+            impliedDate < refDate.getDate())
+        ) {
+          // || (impliedMonth === refDate.getMonth() + 1 && impliedDay && impliedDay < refDate.getDay())
+          year += 1;
+        }
+        result.start.assign('year', year);
+      }
+    });
+    return results;
+  },
+});
 
 const SHORT_SYNTAX_PROJECT_REG_EX = new RegExp(`\\${CH_PRO}[^${ALL_SPECIAL}]+`, 'gi');
 const SHORT_SYNTAX_TAGS_REG_EX = new RegExp(`\\${CH_TAG}[^${ALL_SPECIAL}|\\s]+`, 'gi');
@@ -278,7 +315,7 @@ const parseScheduledDate = (task: Partial<TaskCopy>, now: Date): DueChanges => {
     if (parsedDateArr.length) {
       const parsedDateResult = parsedDateArr[0];
       const start = parsedDateResult.start;
-      const plannedAt = start.date().getTime();
+      const due = start.date().getTime();
       let hasPlannedTime = true;
       // If user doesn't explicitly enter time, set the scheduled date
       // to 9:00:00 of the given day
@@ -286,9 +323,15 @@ const parseScheduledDate = (task: Partial<TaskCopy>, now: Date): DueChanges => {
       if (!start.isCertain('hour')) {
         hasPlannedTime = false;
       }
-      const inputDate = parsedDateResult.text;
+      let inputDate = parsedDateResult.text;
+      // Hacky way to strip short syntax for time estimate that was
+      // accidentally included in the date parser
+      // For example: the task is "Task @14/4 90m" and we don't want "90m"
+      if (inputDate.match(/ [0-9]{1,}m/g)) {
+        inputDate += 'm';
+      }
       return {
-        plannedAt,
+        dueWithTime: due,
         // Strip out the short syntax for scheduled date and given date
         title: task.title.replace(`@${inputDate}`, ''),
         ...(hasPlannedTime ? {} : { hasPlannedTime: false }),
@@ -299,10 +342,10 @@ const parseScheduledDate = (task: Partial<TaskCopy>, now: Date): DueChanges => {
     if (simpleMatch && simpleMatch[0] && typeof +simpleMatch[0] === 'number') {
       const nr = +simpleMatch[0];
       if (nr <= 24) {
-        const plannedAt = new Date();
-        plannedAt.setHours(nr, 0, 0, 0);
+        const due = new Date();
+        due.setHours(nr, 0, 0, 0);
         return {
-          plannedAt: plannedAt.getTime(),
+          dueWithTime: due.getTime(),
           title: task.title.replace(`@${nr}`, ''),
         };
       }

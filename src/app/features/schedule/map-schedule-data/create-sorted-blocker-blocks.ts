@@ -1,4 +1,4 @@
-import { TaskPlanned } from '../../tasks/task.model';
+import { TaskWithDueTime } from '../../tasks/task.model';
 
 import { getTimeLeftForTask } from '../../../util/get-time-left-for-task';
 import { getDateTimeFromClockString } from '../../../util/get-date-time-from-clock-string';
@@ -15,7 +15,7 @@ import {
 const PROJECTION_DAYS: number = 30;
 
 export const createSortedBlockerBlocks = (
-  scheduledTasks: TaskPlanned[],
+  scheduledTasks: TaskWithDueTime[],
   scheduledTaskRepeatCfgs: TaskRepeatCfg[],
   icalEventMap: ScheduleCalendarMapEntry[],
   workStartEndCfg?: ScheduleWorkStartEndCfg,
@@ -177,13 +177,13 @@ const createBlockerBlocksForLunchBreak = (
 };
 
 const createBlockerBlocksForScheduledTasks = (
-  scheduledTasks: TaskPlanned[],
+  scheduledTasks: TaskWithDueTime[],
 ): BlockedBlock[] => {
   const blockedBlocks: BlockedBlock[] = [];
   scheduledTasks.forEach((task) => {
-    const start = task.plannedAt;
-    // const end = task.plannedAt + Math.max(getTimeLeftForTask(task), 1);
-    const end = task.plannedAt + getTimeLeftForTask(task);
+    const start = task.dueWithTime;
+    // const end = task.due + Math.max(getTimeLeftForTask(task), 1);
+    const end = task.dueWithTime + getTimeLeftForTask(task);
 
     let wasMerged = false;
     for (const blockedBlock of blockedBlocks) {

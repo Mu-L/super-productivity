@@ -999,7 +999,7 @@
         "REMINDER": "Podsjetnik",
         "REPEAT": "Ponovi",
         "SCHEDULE_TASK": "Terminiraj zadatak",
-        "SCHEDULED_AT": "Pwograme nan",
+        "DUE": "Pwograme nan",
         "SUB_TASKS": "Broj podzadataka ({{nr}})",
         "TIME": "Vrijeme",
         "TITLE_PLACEHOLDER": "Antre yon tit"
@@ -1611,7 +1611,7 @@
     "PROJECT_SETTINGS": "Postavke projekta",
     "PROJECTS": "Projekti",
     "QUICK_HISTORY": "Brza povijest",
-    "REPEAT_SCHEDULED": "Repete/Pwograme",
+    "ALL_PLANNED_LIST": "Repete/Pwograme",
     "SCHEDULE": "Orè",
     "SETTINGS": "Postavke",
     "SHOW_SEARCH_BAR": "Prikaži traku pretrage",
@@ -1680,7 +1680,7 @@
     "NO_SCHEDULED_TITLE": "Travay ki pwograme pou jounen an",
     "REPEATED_TASKS": "Ponavljajući zadaci",
     "SCHEDULED_TASKS": "Terminirani zadaci",
-    "SCHEDULED_TASKS_WITH_REMINDER": "Travay pwograme ak rapèl",
+    "SCHEDULED_TASKS_WITH_TIME": "Travay pwograme ak rapèl",
     "START_TASK": "Započni zadatak i ukloni podsjetnika"
   },
   "THEMES": {

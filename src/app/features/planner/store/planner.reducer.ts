@@ -1,12 +1,12 @@
 import { createFeature, createReducer, on } from '@ngrx/store';
 import { PlannerActions } from './planner.actions';
 import { moveItemInArray } from '../../../util/move-item-in-array';
-import { ADD_TASK_PANEL_ID } from '../planner.model';
+import { ADD_TASK_PANEL_ID, OVERDUE_LIST_ID } from '../planner.model';
 import { loadAllData } from '../../../root-store/meta/load-all-data.action';
 import { unique } from '../../../util/unique';
-import { updateTaskTags } from '../../tasks/store/task.actions';
-import { TODAY_TAG } from '../../tag/tag.const';
+import { scheduleTaskWithTime, unScheduleTask } from '../../tasks/store/task.actions';
 import { getWorklogStr } from '../../../util/get-work-log-str';
+import { planTasksForToday } from '../../tag/store/tag.actions';
 
 export const plannerFeatureKey = 'planner';
 
@@ -32,14 +32,42 @@ export const plannerReducer = createReducer(
     appDataComplete.planner ? appDataComplete.planner : state,
   ),
 
-  on(updateTaskTags, (state, action) => {
-    if (!action.newTagIds.includes(TODAY_TAG.id)) {
-      return state;
-    }
+  on(planTasksForToday, (state, action) => {
+    const daysCopy = { ...state.days };
+    Object.keys(daysCopy).forEach((day) => {
+      const filtered = daysCopy[day].filter((id) => !action.taskIds.includes(id));
+      if (filtered.length !== daysCopy[day].length) {
+        daysCopy[day] = filtered;
+      }
+    });
+    return {
+      ...state,
+      days: {
+        ...daysCopy,
+      },
+    };
+  }),
 
+  on(scheduleTaskWithTime, (state, action) => {
     const daysCopy = { ...state.days };
     Object.keys(daysCopy).forEach((day) => {
       const filtered = daysCopy[day].filter((id) => id !== action.task.id);
+      if (filtered.length !== daysCopy[day].length) {
+        daysCopy[day] = filtered;
+      }
+    });
+    return {
+      ...state,
+      days: {
+        ...daysCopy,
+      },
+    };
+  }),
+
+  on(unScheduleTask, (state, action) => {
+    const daysCopy = { ...state.days };
+    Object.keys(daysCopy).forEach((day) => {
+      const filtered = daysCopy[day].filter((id) => id !== action.id);
       if (filtered.length !== daysCopy[day].length) {
         daysCopy[day] = filtered;
       }
@@ -63,37 +91,31 @@ export const plannerReducer = createReducer(
     },
   })),
 
-  on(PlannerActions.removeTaskFromDays, (state, action) => {
-    const daysCopy = { ...state.days };
-    Object.keys(daysCopy).forEach((day) => {
-      const filtered = daysCopy[day].filter((id) => id !== action.taskId);
-      if (filtered.length !== daysCopy[day].length) {
-        daysCopy[day] = filtered;
-      }
-    });
-    return {
-      ...state,
-      days: {
-        ...daysCopy,
-      },
-    };
-  }),
-
   on(
     PlannerActions.cleanupOldAndUndefinedPlannerTasks,
     (state, { today, allTaskIds }) => {
       const daysCopy = { ...state.days };
       const todayDate = new Date(today);
+      let wasChanged = false;
       Object.keys(daysCopy).forEach((day) => {
         // NOTE: also deletes today
         if (new Date(day) <= todayDate) {
           delete daysCopy[day];
+          wasChanged = true;
         }
         // remove all deleted tasks if day was not deleted
         if (!!daysCopy[day]) {
-          daysCopy[day] = daysCopy[day].filter((id) => allTaskIds.includes(id));
+          const newDayVal = daysCopy[day].filter((id) => allTaskIds.includes(id));
+          if (newDayVal.length !== daysCopy[day].length) {
+            daysCopy[day] = newDayVal;
+            wasChanged = true;
+          }
         }
       });
+      if (!wasChanged) {
+        return state;
+      }
+
       return {
         ...state,
         days: {
@@ -106,10 +128,12 @@ export const plannerReducer = createReducer(
   on(PlannerActions.transferTask, (state, action) => {
     const targetDays = state.days[action.newDay] || [];
 
+    // alert(action.prevDay);
     const updatePrevDay =
       // NOTE: it is possible that there is no data saved yet when moving from scheduled to unscheduled
       // don't update for add task panel and today list
       action.prevDay === ADD_TASK_PANEL_ID ||
+      action.prevDay === OVERDUE_LIST_ID ||
       !state.days[action.prevDay] ||
       action.prevDay === action.today
         ? {}
@@ -132,6 +156,7 @@ export const plannerReducer = createReducer(
               // when moving a parent to the day, remove all sub-tasks
               .filter((id) => !action.task.subTaskIds.includes(id)),
           };
+    console.log({ updateNextDay, updatePrevDay });
 
     return {
       ...state,

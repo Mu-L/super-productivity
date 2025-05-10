@@ -39,16 +39,18 @@ export const DEFAULT_TAG: Tag = {
   },
 };
 
-export const NO_LIST_TAG: Tag = {
+export const LEGACY_NO_LIST_TAG_ID = 'NO_LIST' as const;
+export const INBOX_TAG: Tag = {
   color: null,
   created: Date.now(),
   ...WORK_CONTEXT_DEFAULT_COMMON,
-  icon: 'question_mark',
-  title: 'no list scheduled',
-  id: 'NO_LIST',
+  icon: 'inbox',
+  title: 'Inbox',
+  // _TAG to distinguish from legacy default project
+  id: 'INBOX_TAG',
   theme: {
     ...WORK_CONTEXT_DEFAULT_THEME,
-    primary: DEFAULT_TODAY_TAG_COLOR,
+    primary: 'rgb(144, 187, 165)',
     backgroundImageDark: '',
     isDisableBackgroundGradient: false,
   },

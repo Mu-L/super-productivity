@@ -1,6 +1,7 @@
 import confetti from 'canvas-confetti';
 
 import {
+  AfterViewInit,
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
@@ -72,6 +73,7 @@ import {
 } from './simple-counter-summary-item/simple-counter-summary-item.component';
 import { promiseTimeout } from '../../util/promise-timeout';
 import { TaskArchiveService } from '../../features/time-tracking/task-archive.service';
+import { IS_TOUCH_ONLY } from '../../util/is-touch-only';
 
 const SUCCESS_ANIMATION_DURATION = 500;
 const MAGIC_YESTERDAY_MARGIN = 4 * 60 * 60 * 1000;
@@ -107,7 +109,7 @@ const MAGIC_YESTERDAY_MARGIN = 4 * 60 * 60 * 1000;
   ],
   animations: [expandAnimation],
 })
-export class DailySummaryComponent implements OnInit, OnDestroy {
+export class DailySummaryComponent implements OnInit, OnDestroy, AfterViewInit {
   readonly configService = inject(GlobalConfigService);
   readonly workContextService = inject(WorkContextService);
   private readonly _taskService = inject(TaskService);
@@ -282,10 +284,15 @@ export class DailySummaryComponent implements OnInit, OnDestroy {
           this.dayStr = s.params.dayStr;
         }
       });
+  }
 
-    this._startCelebrationTimeout = window.setTimeout(() => {
-      this._celebrate();
-    }, 750);
+  ngAfterViewInit(): void {
+    this._startCelebrationTimeout = window.setTimeout(
+      () => {
+        this._celebrate();
+      },
+      IS_TOUCH_ONLY ? 1500 : 500,
+    );
   }
 
   ngOnDestroy(): void {
@@ -397,7 +404,7 @@ export class DailySummaryComponent implements OnInit, OnDestroy {
 
   private _getDailySummaryTasksFlat$(dayStr: string): Observable<Task[]> {
     // TODO make more performant!!
-    const _isWorkedOnOrDoneToday = (() => {
+    const _isWorkedOnDoneOrDueToday = (() => {
       if (this.isIncludeYesterday) {
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
@@ -410,12 +417,14 @@ export class DailySummaryComponent implements OnInit, OnDestroy {
           (t.timeSpentOnDay &&
             t.timeSpentOnDay[yesterdayStr] &&
             t.timeSpentOnDay[yesterdayStr] > 0) ||
+          (t.dueDay && t.dueDay === dayStr) ||
           (t.isDone && t.doneOn && (isToday(t.doneOn) || isYesterday(t.doneOn)));
       } else {
         return (t: Task) =>
           (t.timeSpentOnDay &&
             t.timeSpentOnDay[dayStr] &&
             t.timeSpentOnDay[dayStr] > 0) ||
+          (t.dueDay && t.dueDay === dayStr) ||
           (t.isDone && t.doneOn && isToday(t.doneOn));
       }
     })();
@@ -428,16 +437,17 @@ export class DailySummaryComponent implements OnInit, OnDestroy {
       },
     ]): TaskWithSubTasks[] => {
       const ids = (taskState && (taskState.ids as string[])) || [];
-      const archiveTasksI = ids.map((id) => taskState.entities[id]);
+      const tasksI = ids.map((id) => taskState.entities[id]);
+
       let filteredTasks;
       if (activeId === TODAY_TAG.id) {
-        filteredTasks = archiveTasksI as Task[];
+        filteredTasks = tasksI as Task[];
       } else if (activeType === WorkContextType.PROJECT) {
-        filteredTasks = archiveTasksI.filter(
+        filteredTasks = tasksI.filter(
           (task) => (task as Task).projectId === activeId,
         ) as Task[];
       } else {
-        filteredTasks = archiveTasksI.filter((task) =>
+        filteredTasks = tasksI.filter((task) =>
           !!(task as Task).parentId
             ? (
                 taskState.entities[(task as Task).parentId as string] as Task
@@ -465,12 +475,12 @@ export class DailySummaryComponent implements OnInit, OnDestroy {
       let flatTasks: TaskWithSubTasks[] = [];
       tasks.forEach((pt: TaskWithSubTasks) => {
         if (pt.subTasks && pt.subTasks.length) {
-          const subTasks = pt.subTasks.filter((st) => _isWorkedOnOrDoneToday(st));
+          const subTasks = pt.subTasks.filter((st) => _isWorkedOnDoneOrDueToday(st));
           if (subTasks.length) {
             flatTasks.push(pt);
             flatTasks = flatTasks.concat(subTasks as TaskWithSubTasks[]);
           }
-        } else if (_isWorkedOnOrDoneToday(pt)) {
+        } else if (_isWorkedOnDoneOrDueToday(pt)) {
           flatTasks.push(pt);
         }
       });
@@ -484,13 +494,13 @@ export class DailySummaryComponent implements OnInit, OnDestroy {
       tasks.forEach((pt: TaskWithSubTasks) => {
         if (pt.subTasks && pt.subTasks.length) {
           const subTasks: TaskWithSubTasks[] = pt.subTasks
-            .filter((st) => _isWorkedOnOrDoneToday(st))
+            .filter((st) => _isWorkedOnDoneOrDueToday(st))
             .map((t) => ({ ...t, subTasks: [] }));
           if (subTasks.length) {
             flatTasks.push(pt);
             flatTasks = flatTasks.concat(subTasks);
           }
-        } else if (_isWorkedOnOrDoneToday(pt) || pt.repeatCfgId) {
+        } else if (_isWorkedOnDoneOrDueToday(pt) || pt.repeatCfgId) {
           flatTasks.push(pt);
         }
       });

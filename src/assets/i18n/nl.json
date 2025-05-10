@@ -999,7 +999,7 @@
         "REMINDER": "Herinnering",
         "REPEAT": "Herhaling",
         "SCHEDULE_TASK": "Taak plannen",
-        "SCHEDULED_AT": "Gepland op",
+        "DUE": "Gepland op",
         "SUB_TASKS": "Subtaken ({{nr}})",
         "TIME": "Tijd",
         "TITLE_PLACEHOLDER": "Voer een titel in"
@@ -1611,7 +1611,7 @@
     "PROJECT_SETTINGS": "Projectinstellingen",
     "PROJECTS": "Projecten",
     "QUICK_HISTORY": "Snelle geschiedenis",
-    "REPEAT_SCHEDULED": "Herhalen/ Gepland",
+    "ALL_PLANNED_LIST": "Herhalen/ Gepland",
     "SCHEDULE": "Schema",
     "SETTINGS": "Instellingen",
     "SHOW_SEARCH_BAR": "Toon zoekbalk",
@@ -1680,7 +1680,7 @@
     "NO_SCHEDULED_TITLE": "Geplande taken voor de dag",
     "REPEATED_TASKS": "Herhaalde taken",
     "SCHEDULED_TASKS": "Geplande taken",
-    "SCHEDULED_TASKS_WITH_REMINDER": "Geplande taken met herinnering",
+    "SCHEDULED_TASKS_WITH_TIME": "Geplande taken met herinnering",
     "START_TASK": "Start de taak nu en verwijder de herinnering"
   },
   "THEMES": {

@@ -16,7 +16,12 @@ export enum TaskDetailTargetPanel {
   DONT_OPEN_PANEL = 'DONT_OPEN_PANEL',
 }
 
-export type DropListModelSource = 'UNDONE' | 'DONE' | 'BACKLOG' | 'ADD_TASK_PANEL';
+export type DropListModelSource =
+  | 'UNDONE'
+  | 'DONE'
+  | 'BACKLOG'
+  | 'ADD_TASK_PANEL'
+  | 'OVERDUE';
 
 // NOTE: do not change these, as they are used inside task repeat model directly
 // (new can be added though)
@@ -79,7 +84,13 @@ export interface TaskCopy extends IssueFieldsForTask {
   created: number;
   isDone: boolean;
   doneOn?: number;
-  plannedAt?: number;
+
+  // datetime
+  dueWithTime?: number;
+  // day only
+  dueDay?: string;
+
+  // TODO replace
   hasPlannedTime?: boolean;
   // remindCfg: TaskReminderOptionId;
 
@@ -114,20 +125,22 @@ export interface TaskWithReminderData extends Task {
 
 export interface TaskWithReminder extends Task {
   reminderId: string;
-  plannedAt: number;
+  dueWithTime: number;
 }
 
-export interface TaskPlanned extends Task {
-  plannedAt: number;
+export interface TaskWithDueTime extends Task {
+  dueWithTime: number;
 }
 
-export interface TaskWithPlannedDay extends Task {
-  plannedDay: string;
+export interface TaskWithDueDay extends Task {
+  dueDay: string;
 }
+
+export type TaskPlannedWithDayOrTime = TaskWithDueTime | TaskWithDueDay;
 
 export interface TaskWithoutReminder extends Task {
   reminderId: undefined;
-  plannedAt: undefined;
+  due: undefined;
 }
 
 export interface TaskWithPlannedForDayIndication extends TaskWithoutReminder {

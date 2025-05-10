@@ -102,41 +102,51 @@
       </ng-container>
     </task-detail-item>
   }
-  @if (plannerService.plannedTaskDayMap$ | async; as plannedTaskDayMap) {
-    <task-detail-item
-      (collapseParent)="collapseParent()"
-      (editActionTriggered)="scheduleTask()"
-      (keyPress)="onItemKeyPress($event)"
-      [inputIcon]="task.reminderId || (plannedTaskDayMap || {})[task.id] ? 'edit' : 'add'"
-      class="input-item"
-    >
-      <ng-container input-title>
+  <task-detail-item
+    (collapseParent)="collapseParent()"
+    (editActionTriggered)="scheduleTask()"
+    (keyPress)="onItemKeyPress($event)"
+    [inputIcon]="task.dueWithTime || task.dueDay ? 'edit' : 'add'"
+    class="input-item"
+    [class.color-warn]="isOverdue"
+  >
+    <ng-container input-title>
+      @if (task.dueDay) {
+        <mat-icon>today</mat-icon>
+      } @else if (task.dueWithTime && !task.reminderId) {
+        <mat-icon>schedule</mat-icon>
+      } @else {
         <mat-icon>alarm</mat-icon>
-        @if (task.reminderId || (plannedTaskDayMap || {})[task.id]) {
-          <span>{{ T.F.TASK.ADDITIONAL_INFO.SCHEDULED_AT | translate }}</span>
-        }
-        @if (!(task.reminderId || (plannedTaskDayMap || {})[task.id])) {
-          <span>{{ T.F.TASK.ADDITIONAL_INFO.SCHEDULE_TASK | translate }}</span>
-        }
-      </ng-container>
-      <ng-container input-value>
-        @if (reminderData$ | async; as reminderData) {
-          <div
-            [matTooltip]="reminderData.remindAt | date: 'short'"
-            class="reminder-value"
-            matTooltipPosition="left"
-          >
-            {{ reminderData.remindAt | date: 'short' }}
-          </div>
-        }
-        @if ((plannedTaskDayMap || {})[task.id]) {
-          <div class="reminder-value">
-            {{ (plannedTaskDayMap || {})[task.id] | date: 'shortDate' }}
-          </div>
-        }
-      </ng-container>
-    </task-detail-item>
-  }
+      }
+      @if (task.dueWithTime || task.dueDay) {
+        <span>{{ T.F.TASK.ADDITIONAL_INFO.DUE | translate }}</span>
+      }
+      @if (!(task.dueWithTime || task.dueDay)) {
+        <span>{{ T.F.TASK.ADDITIONAL_INFO.SCHEDULE_TASK | translate }}</span>
+      }
+    </ng-container>
+    <ng-container input-value>
+      @if (task.dueWithTime) {
+        <div
+          class="reminder-value"
+          matTooltipPosition="left"
+        >
+          {{ task.dueWithTime | date: 'short' }}
+        </div>
+      }
+      @if (task.dueDay) {
+        <div class="reminder-value">
+          @if (isPlannedForTodayDay) {
+            <mat-icon>wb_sunny</mat-icon>
+            {{ T.G.TODAY_TAG_TITLE | translate }}
+          } @else {
+            {{ task.dueDay | date: 'shortDate' }}
+          }
+        </div>
+      }
+    </ng-container>
+  </task-detail-item>
+
   @if (task.issueId && task.issueType !== ICAL_TYPE) {
     <task-detail-item
       (collapseParent)="collapseParent()"

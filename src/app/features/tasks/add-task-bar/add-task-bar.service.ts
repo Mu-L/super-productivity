@@ -31,6 +31,7 @@ import { T } from '../../../t.const';
 import { IssueService } from '../../issue/issue.service';
 import { assertTruthy } from '../../../util/assert-truthy';
 import { DEFAULT_PROJECT_COLOR } from '../../work-context/work-context.const';
+import { TODAY_TAG } from '../../tag/tag.const';
 
 @Injectable({
   providedIn: 'root',
@@ -119,7 +120,7 @@ export class AddTaskBarService {
     return taskSuggestionsCtrl.valueChanges.pipe(
       filter((val) => typeof val === 'string'),
       withLatestFrom(
-        this._tagService.tags$,
+        this._tagService.tagsNoMyDayAndNoList$,
         this._projectService.list$,
         this._workContextService.activeWorkContext$,
         this._globalConfigService.shortSyntax$,
@@ -171,10 +172,7 @@ export class AddTaskBarService {
         this._workContextService.activeWorkContextType === WorkContextType.TAG
       ) {
         const task = await this._taskService.getByIdOnce$(item.taskId).toPromise();
-        this._taskService.updateTags(task, [
-          ...task.tagIds,
-          this._workContextService.activeWorkContextId as string,
-        ]);
+        this._taskService.moveToCurrentWorkContext(task);
       }
       this._snackService.open({
         ico: 'playlist_add',
@@ -324,10 +322,10 @@ export class AddTaskBarService {
       return await this._projectService.getByIdOnce$(projectId).toPromise();
     } else {
       const firstTagId = (tagIds as string[])[0];
-      if (!firstTagId) {
-        throw new Error('No first tag');
-      }
-      return await this._tagService.getTagById$(firstTagId).pipe(first()).toPromise();
+      return await this._tagService
+        .getTagById$(firstTagId || TODAY_TAG.id)
+        .pipe(first())
+        .toPromise();
     }
   }
 }

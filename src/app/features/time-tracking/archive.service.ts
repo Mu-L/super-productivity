@@ -11,6 +11,7 @@ import {
 import { Store } from '@ngrx/store';
 import { TimeTrackingActions } from './store/time-tracking.actions';
 import { getWorklogStr } from '../../util/get-work-log-str';
+import { INBOX_TAG } from '../tag/tag.const';
 
 /*
 # Considerations for flush architecture:
@@ -63,8 +64,10 @@ export class ArchiveService {
         ...task,
         reminderId: undefined,
         isDone: true,
-        plannedAt: undefined,
+        dueWithTime: undefined,
+        dueDay: undefined,
         _hideSubTasksMode: undefined,
+        tagIds: task.tagIds.filter((id) => id !== INBOX_TAG.id),
         doneOn:
           task.isDone && task.doneOn
             ? task.doneOn
@@ -135,6 +138,8 @@ export class ArchiveService {
         isUpdateRevAndLastUpdate: true,
       },
     );
-    alert('FLUSHED ALL FROM ARCHIVE YOUNG TO OLD');
+    console.log(
+      '______________________\nFLUSHED ALL FROM ARCHIVE YOUNG TO OLD\n_______________________',
+    );
   }
 }

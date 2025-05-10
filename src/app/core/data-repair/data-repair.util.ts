@@ -62,9 +62,26 @@ export const dataRepair = (data: AppDataCompleteNew): AppDataCompleteNew => {
   dataOut = _addTodayTagIfNoProjectIdOrTagId(dataOut);
   dataOut = _removeDuplicatesFromArchive(dataOut);
   dataOut = _removeMissingReminderIds(dataOut);
+  dataOut = _fixTaskRepeatMissingWeekday(dataOut);
 
   // console.timeEnd('dataRepair');
   return dataOut;
+};
+
+const _fixTaskRepeatMissingWeekday = (data: AppDataCompleteNew): AppDataCompleteNew => {
+  if (data.taskRepeatCfg && data.taskRepeatCfg.entities) {
+    Object.keys(data.taskRepeatCfg.entities).forEach((key) => {
+      const cfg = data.taskRepeatCfg.entities[key] as TaskRepeatCfgCopy;
+      cfg.monday = cfg.monday ?? false;
+      cfg.tuesday = cfg.tuesday ?? false;
+      cfg.wednesday = cfg.wednesday ?? false;
+      cfg.thursday = cfg.thursday ?? false;
+      cfg.friday = cfg.friday ?? false;
+      cfg.saturday = cfg.saturday ?? false;
+      cfg.sunday = cfg.sunday ?? false;
+    });
+  }
+  return data;
 };
 
 const _fixEntityStates = (data: AppDataCompleteNew): AppDataCompleteNew => {
@@ -109,7 +126,7 @@ const _removeMissingReminderIds = (data: AppDataCompleteNew): AppDataCompleteNew
       data.task.entities[id] = {
         ...t,
         reminderId: undefined,
-        plannedAt: undefined,
+        dueWithTime: undefined,
       };
     }
   });

@@ -999,7 +999,7 @@
         "REMINDER": "Hatırlatma",
         "REPEAT": "Tekrar et",
         "SCHEDULE_TASK": "Görev Takvimi",
-        "SCHEDULED_AT": "Planlandı",
+        "DUE": "Planlandı",
         "SUB_TASKS": "Alt Görevler ({{nr}})",
         "TIME": "Zaman",
         "TITLE_PLACEHOLDER": "Bir başlık girin"
@@ -1611,7 +1611,7 @@
     "PROJECT_SETTINGS": "Proje Ayarları",
     "PROJECTS": "Projeler",
     "QUICK_HISTORY": "Hızlı Geçmiş",
-    "REPEAT_SCHEDULED": "Tekrar/Planlanmış",
+    "ALL_PLANNED_LIST": "Tekrar/Planlanmış",
     "SCHEDULE": "Takvim",
     "SETTINGS": "Ayarlar",
     "SHOW_SEARCH_BAR": "Arama çubuğunu göster",
@@ -1680,7 +1680,7 @@
     "NO_SCHEDULED_TITLE": "Gün İçin Zamanlanmış Görevler",
     "REPEATED_TASKS": "Tekrarlanan görevler",
     "SCHEDULED_TASKS": "Zamanlanmış görevler",
-    "SCHEDULED_TASKS_WITH_REMINDER": "Hatırlatıcılı zamanlanmış görevler",
+    "SCHEDULED_TASKS_WITH_TIME": "Hatırlatıcılı zamanlanmış görevler",
     "START_TASK": "Görevi şimdi başlat ve anımsatıcıyı kaldır"
   },
   "THEMES": {
